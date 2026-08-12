@@ -10,14 +10,15 @@ RUN apt-get update && apt-get install -y \
 # Копируем весь проект
 COPY . .
 
-# Устанавливаем зависимости напрямую
+# Устанавливаем все зависимости (включая jinja2)
 RUN pip install --no-cache-dir \
     fastapi \
     uvicorn[standard] \
     aiogram \
     python-dotenv \
     aiohttp \
-    python-multipart
+    python-multipart \
+    jinja2
 
 EXPOSE 8000
 

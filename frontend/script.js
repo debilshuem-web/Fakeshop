@@ -11,6 +11,7 @@ let cartItems = [];
 let currentProductId = null;
 let appliedPromo = null;
 let selectedProductIds = [];
+let adminTab = 'dashboard';
 
 // ========== АДМИНЫ ==========
 const ADMIN_IDS = [1886614664, 8814572765];
@@ -690,8 +691,6 @@ function escapeHtml(text) {
 // ========================================
 // АДМИН-ПАНЕЛЬ
 // ========================================
-let adminTab = 'dashboard';
-
 function switchTab(tab) {
     adminTab = tab;
     
@@ -707,13 +706,13 @@ function switchTab(tab) {
     switch (tab) {
         case 'dashboard': loadDashboard(); break;
         case 'products': loadAdminProducts(); break;
+        case 'categories': loadAdminCategories(); break;
         case 'orders': loadAdminOrders(); break;
         case 'promocodes': loadPromoCodes(); break;
         case 'faq': loadFaq(); break;
         case 'banned': loadBannedUsers(); break;
         case 'settings': loadSettings(); break;
         case 'reviews': loadAdminReviews(); break;
-        case 'categories': loadAdminCategories(); break;
     }
 }
 
@@ -723,11 +722,17 @@ function switchTab(tab) {
 async function loadDashboard() {
     try {
         const stats = await apiRequest('/api/stats');
-        $('statProducts').textContent = stats.total_products || 0;
-        $('statOrders').textContent = stats.total_orders || 0;
-        $('statRevenue').textContent = `${stats.total_revenue || 0} BYN`;
-        $('statUsers').textContent = stats.total_users || 0;
-        $('statTodayOrders').textContent = stats.today_orders || 0;
+        const elements = {
+            statProducts: stats.total_products || 0,
+            statOrders: stats.total_orders || 0,
+            statRevenue: `${stats.total_revenue || 0} BYN`,
+            statUsers: stats.total_users || 0,
+            statTodayOrders: stats.today_orders || 0
+        };
+        Object.keys(elements).forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = elements[id];
+        });
     } catch (error) {
         console.error('Ошибка загрузки статистики:', error);
     }
@@ -737,12 +742,13 @@ async function loadDashboard() {
 // АДМИН: ТОВАРЫ
 // ========================================
 async function loadAdminProducts() {
-    const list = $('adminProductsList');
+    const list = document.getElementById('adminProductsList');
+    if (!list) return;
     list.innerHTML = '<div class="skeleton-card" style="height:60px;"></div>';
     
     try {
-        const search = $('adminSearchInput')?.value || '';
-        const category = $('adminCategoryFilter')?.value || 'Все';
+        const search = document.getElementById('adminSearchInput')?.value || '';
+        const category = document.getElementById('adminCategoryFilter')?.value || 'Все';
         let url = '/api/products?limit=100';
         if (search) url += `&search=${encodeURIComponent(search)}`;
         if (category && category !== 'Все') url += `&category=${encodeURIComponent(category)}`;
@@ -778,38 +784,40 @@ async function loadAdminProducts() {
 }
 
 function toggleProductForm() {
-    const container = $('productFormContainer');
+    const container = document.getElementById('productFormContainer');
+    if (!container) return;
     container.style.display = container.style.display === 'none' ? 'block' : 'none';
     if (container.style.display === 'block') {
-        $('productFormTitle').textContent = '➕ Новый товар';
-        $('productName').value = '';
-        $('productPrice').value = '';
-        $('productQuantity').value = '';
-        $('productCategory').value = 'Все';
-        $('productPhoto').value = '';
-        $('productNote').value = '';
-        $('productFromChina').checked = false;
-        $('productFormSubmit').dataset.productId = '';
-        $('productFormSubmit').textContent = '✅ Сохранить';
+        document.getElementById('productFormTitle').textContent = '➕ Новый товар';
+        document.getElementById('productName').value = '';
+        document.getElementById('productPrice').value = '';
+        document.getElementById('productQuantity').value = '';
+        document.getElementById('productCategory').value = 'Все';
+        document.getElementById('productPhoto').value = '';
+        document.getElementById('productNote').value = '';
+        const chinaCheck = document.getElementById('productFromChina');
+        if (chinaCheck) chinaCheck.checked = false;
+        document.getElementById('productFormSubmit').dataset.productId = '';
+        document.getElementById('productFormSubmit').textContent = '✅ Сохранить';
     }
 }
 
 async function saveProduct() {
-    const name = $('productName').value.trim();
-    const price = parseFloat($('productPrice').value);
-    const quantity = parseInt($('productQuantity').value);
-    const category = $('productCategory').value;
-    const photo = $('productPhoto').value.trim();
-    const note = $('productNote').value.trim();
-    const from_china = $('productFromChina')?.checked ? 1 : 0;
-    const editId = $('productFormSubmit').dataset.productId;
+    const name = document.getElementById('productName').value.trim();
+    const price = parseFloat(document.getElementById('productPrice').value);
+    const quantity = parseInt(document.getElementById('productQuantity').value);
+    const category = document.getElementById('productCategory').value;
+    const photo = document.getElementById('productPhoto').value.trim();
+    const note = document.getElementById('productNote').value.trim();
+    const fromChina = document.getElementById('productFromChina')?.checked ? 1 : 0;
+    const editId = document.getElementById('productFormSubmit').dataset.productId;
     
     if (!name || isNaN(price) || isNaN(quantity)) {
         showToast('Заполните обязательные поля', 'error');
         return;
     }
     
-    const data = { name, price, quantity, category, photo, note, from_china };
+    const data = { name, price, quantity, category, photo, note, from_china: fromChina };
     
     try {
         if (editId) {
@@ -838,18 +846,17 @@ async function editProduct(id) {
     try {
         const product = await apiRequest(`/api/products/${id}`);
         toggleProductForm();
-        $('productFormTitle').textContent = '✏️ Редактировать товар';
-        $('productName').value = product.name;
-        $('productPrice').value = product.price;
-        $('productQuantity').value = product.quantity;
-        $('productCategory').value = product.category || 'Все';
-        $('productPhoto').value = product.photo || '';
-        $('productNote').value = product.note || '';
-        if ($('productFromChina')) {
-            $('productFromChina').checked = product.from_china == 1;
-        }
-        $('productFormSubmit').dataset.productId = id;
-        $('productFormSubmit').textContent = '💾 Обновить';
+        document.getElementById('productFormTitle').textContent = '✏️ Редактировать товар';
+        document.getElementById('productName').value = product.name;
+        document.getElementById('productPrice').value = product.price;
+        document.getElementById('productQuantity').value = product.quantity;
+        document.getElementById('productCategory').value = product.category || 'Все';
+        document.getElementById('productPhoto').value = product.photo || '';
+        document.getElementById('productNote').value = product.note || '';
+        const chinaCheck = document.getElementById('productFromChina');
+        if (chinaCheck) chinaCheck.checked = product.from_china == 1;
+        document.getElementById('productFormSubmit').dataset.productId = id;
+        document.getElementById('productFormSubmit').textContent = '💾 Обновить';
     } catch (error) {
         showToast('Ошибка загрузки товара', 'error');
     }
@@ -868,21 +875,19 @@ async function deleteProduct(id) {
 }
 
 // ========================================
-// АДМИН: КАТЕГОРИИ (CRUD)
+// АДМИН: КАТЕГОРИИ
 // ========================================
 async function loadAdminCategories() {
-    const list = $('adminCategoriesList');
+    const list = document.getElementById('adminCategoriesList');
     if (!list) return;
     list.innerHTML = '<div class="skeleton-card" style="height:40px;"></div>';
     
     try {
         const categories = await apiRequest('/api/categories');
-        
         if (categories.length === 0) {
             list.innerHTML = '<div class="empty-state"><p>Категорий нет</p></div>';
             return;
         }
-        
         list.innerHTML = categories.map(c => `
             <div class="list-item">
                 <div class="list-item-info">
@@ -891,8 +896,8 @@ async function loadAdminCategories() {
                 </div>
                 ${c.name !== 'Все' ? `
                 <div class="list-item-actions">
-                    <button class="edit-btn" onclick="editCategory(${c.id}, '${c.name}', '${c.icon || ''}')" title="Изменить"><i class="fas fa-pen"></i></button>
-                    <button class="delete-btn" onclick="deleteCategory(${c.id})" title="Удалить"><i class="fas fa-trash"></i></button>
+                    <button class="edit-btn" onclick="editCategory(${c.id}, '${c.name}', '${c.icon || ''}')"><i class="fas fa-pen"></i></button>
+                    <button class="delete-btn" onclick="deleteCategory(${c.id})"><i class="fas fa-trash"></i></button>
                 </div>
                 ` : `<span class="status-badge completed">Системная</span>`}
             </div>
@@ -903,21 +908,21 @@ async function loadAdminCategories() {
 }
 
 function toggleCategoryForm() {
-    const container = $('categoryFormContainer');
+    const container = document.getElementById('categoryFormContainer');
     if (!container) return;
     container.style.display = container.style.display === 'none' ? 'block' : 'none';
     if (container.style.display === 'block') {
-        $('categoryName').value = '';
-        $('categoryIcon').value = '';
-        $('categoryFormSubmit').dataset.categoryId = '';
-        $('categoryFormSubmit').textContent = '✅ Сохранить';
+        document.getElementById('categoryName').value = '';
+        document.getElementById('categoryIcon').value = '';
+        document.getElementById('categoryFormSubmit').dataset.categoryId = '';
+        document.getElementById('categoryFormSubmit').textContent = '✅ Сохранить';
     }
 }
 
 async function saveCategory() {
-    const name = $('categoryName').value.trim();
-    const icon = $('categoryIcon').value.trim();
-    const editId = $('categoryFormSubmit').dataset.categoryId;
+    const name = document.getElementById('categoryName').value.trim();
+    const icon = document.getElementById('categoryIcon').value.trim();
+    const editId = document.getElementById('categoryFormSubmit').dataset.categoryId;
     
     if (!name) {
         showToast('Введите название категории', 'error');
@@ -948,10 +953,10 @@ async function saveCategory() {
 
 function editCategory(id, name, icon) {
     toggleCategoryForm();
-    $('categoryName').value = name;
-    $('categoryIcon').value = icon;
-    $('categoryFormSubmit').dataset.categoryId = id;
-    $('categoryFormSubmit').textContent = '💾 Обновить';
+    document.getElementById('categoryName').value = name;
+    document.getElementById('categoryIcon').value = icon;
+    document.getElementById('categoryFormSubmit').dataset.categoryId = id;
+    document.getElementById('categoryFormSubmit').textContent = '💾 Обновить';
 }
 
 async function deleteCategory(id) {
@@ -970,11 +975,12 @@ async function deleteCategory(id) {
 // АДМИН: ЗАЯВКИ
 // ========================================
 async function loadAdminOrders() {
-    const list = $('adminOrdersList');
+    const list = document.getElementById('adminOrdersList');
+    if (!list) return;
     list.innerHTML = '<div class="skeleton-card" style="height:60px;"></div>';
     
     try {
-        const status = $('orderStatusFilter')?.value || 'all';
+        const status = document.getElementById('orderStatusFilter')?.value || 'all';
         let url = '/api/orders?limit=100';
         if (status !== 'all') url += `&status=${status}`;
         
@@ -1048,7 +1054,8 @@ async function deleteOrder(id) {
 // АДМИН: ПРОМОКОДЫ
 // ========================================
 async function loadPromoCodes() {
-    const list = $('adminPromoCodes');
+    const list = document.getElementById('adminPromoCodes');
+    if (!list) return;
     try {
         const data = await apiRequest('/api/promocodes');
         if (data.length === 0) {
@@ -1072,16 +1079,17 @@ async function loadPromoCodes() {
 }
 
 function togglePromoForm() {
-    const container = $('promoFormContainer');
+    const container = document.getElementById('promoFormContainer');
+    if (!container) return;
     container.style.display = container.style.display === 'none' ? 'block' : 'none';
 }
 
 async function savePromo() {
-    const code = $('promoCode').value.trim().toUpperCase();
-    const discount = parseInt($('promoDiscount').value);
-    const min_order = parseFloat($('promoMinOrder').value) || 0;
-    const uses_limit = parseInt($('promoUsesLimit').value) || 0;
-    const expires_at = $('promoExpiresAt').value || null;
+    const code = document.getElementById('promoCode').value.trim().toUpperCase();
+    const discount = parseInt(document.getElementById('promoDiscount').value);
+    const min_order = parseFloat(document.getElementById('promoMinOrder').value) || 0;
+    const uses_limit = parseInt(document.getElementById('promoUsesLimit').value) || 0;
+    const expires_at = document.getElementById('promoExpiresAt').value || null;
     
     if (!code || isNaN(discount)) {
         showToast('Заполните код и скидку', 'error');
@@ -1116,7 +1124,8 @@ async function deletePromo(code) {
 // АДМИН: FAQ
 // ========================================
 async function loadFaq() {
-    const list = $('adminFaqList');
+    const list = document.getElementById('adminFaqList');
+    if (!list) return;
     try {
         const data = await apiRequest('/api/faq');
         if (data.length === 0) {
@@ -1140,13 +1149,14 @@ async function loadFaq() {
 }
 
 function toggleFaqForm() {
-    const container = $('faqFormContainer');
+    const container = document.getElementById('faqFormContainer');
+    if (!container) return;
     container.style.display = container.style.display === 'none' ? 'block' : 'none';
 }
 
 async function saveFaq() {
-    const question = $('faqQuestion').value.trim();
-    const answer = $('faqAnswer').value.trim();
+    const question = document.getElementById('faqQuestion').value.trim();
+    const answer = document.getElementById('faqAnswer').value.trim();
     
     if (!question || !answer) {
         showToast('Заполните вопрос и ответ', 'error');
@@ -1181,7 +1191,8 @@ async function deleteFaq(id) {
 // АДМИН: БАН-ЛИСТ
 // ========================================
 async function loadBannedUsers() {
-    const list = $('adminBannedList');
+    const list = document.getElementById('adminBannedList');
+    if (!list) return;
     try {
         const data = await apiRequest('/api/banned');
         if (data.length === 0) {
@@ -1205,8 +1216,8 @@ async function loadBannedUsers() {
 }
 
 async function banUser() {
-    const userId = parseInt($('banUserId').value);
-    const reason = $('banReason').value.trim() || 'Нарушение правил';
+    const userId = parseInt(document.getElementById('banUserId').value);
+    const reason = document.getElementById('banReason').value.trim() || 'Нарушение правил';
     
     if (!userId) {
         showToast('Введите ID пользователя', 'error');
@@ -1218,8 +1229,8 @@ async function banUser() {
             method: 'POST'
         });
         showToast(`🚫 Пользователь ${userId} забанен`, 'info');
-        $('banUserId').value = '';
-        $('banReason').value = '';
+        document.getElementById('banUserId').value = '';
+        document.getElementById('banReason').value = '';
         loadBannedUsers();
     } catch (error) {
         showToast('Ошибка', 'error');
@@ -1244,13 +1255,19 @@ async function loadSettings() {
     try {
         const data = await apiRequest('/api/settings');
         if (data) {
-            $('settingShopName').value = data.shop_name || '';
-            $('settingShopDesc').value = data.shop_description || '';
-            $('settingContactManager').value = data.contact_manager || '@ManaReaper';
-            $('settingDelivery').value = data.delivery_info || '';
-            $('settingPayment').value = data.payment_info || '';
-            $('settingMaintenance').value = data.maintenance_mode || 'false';
-            $('settingReviewsChannel').value = data.reviews_channel || '';
+            const map = {
+                settingShopName: data.shop_name || '',
+                settingShopDesc: data.shop_description || '',
+                settingContactManager: data.contact_manager || '@ManaReaper',
+                settingDelivery: data.delivery_info || '',
+                settingPayment: data.payment_info || '',
+                settingMaintenance: data.maintenance_mode || 'false',
+                settingReviewsChannel: data.reviews_channel || ''
+            };
+            Object.keys(map).forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.value = map[id];
+            });
         }
     } catch (error) {
         console.error('Ошибка загрузки настроек:', error);
@@ -1259,13 +1276,13 @@ async function loadSettings() {
 
 async function saveSettings() {
     const data = {
-        shop_name: $('settingShopName').value.trim(),
-        shop_description: $('settingShopDesc').value.trim(),
-        contact_manager: $('settingContactManager').value.trim(),
-        delivery_info: $('settingDelivery').value.trim(),
-        payment_info: $('settingPayment').value.trim(),
-        maintenance_mode: $('settingMaintenance').value,
-        reviews_channel: $('settingReviewsChannel').value.trim()
+        shop_name: document.getElementById('settingShopName').value.trim(),
+        shop_description: document.getElementById('settingShopDesc').value.trim(),
+        contact_manager: document.getElementById('settingContactManager').value.trim(),
+        delivery_info: document.getElementById('settingDelivery').value.trim(),
+        payment_info: document.getElementById('settingPayment').value.trim(),
+        maintenance_mode: document.getElementById('settingMaintenance').value,
+        reviews_channel: document.getElementById('settingReviewsChannel').value.trim()
     };
     
     try {
@@ -1283,7 +1300,8 @@ async function saveSettings() {
 // АДМИН: ОТЗЫВЫ
 // ========================================
 async function loadAdminReviews() {
-    const list = $('adminReviewsList');
+    const list = document.getElementById('adminReviewsList');
+    if (!list) return;
     try {
         const data = await apiRequest('/api/reviews');
         if (data.length === 0) {
@@ -1308,16 +1326,21 @@ async function loadAdminReviews() {
 // РАССЫЛКА
 // ========================================
 function openSendAll() {
-    $('sendAllModal').classList.add('open');
+    const modal = document.getElementById('sendAllModal');
+    if (modal) modal.classList.add('open');
 }
 
 function closeSendAll() {
-    $('sendAllModal').classList.remove('open');
-    $('sendAllText').value = '';
+    const modal = document.getElementById('sendAllModal');
+    if (modal) {
+        modal.classList.remove('open');
+        const text = document.getElementById('sendAllText');
+        if (text) text.value = '';
+    }
 }
 
 async function sendAll() {
-    const text = $('sendAllText').value.trim();
+    const text = document.getElementById('sendAllText')?.value.trim();
     if (!text) {
         showToast('Введите текст рассылки', 'error');
         return;
@@ -1347,11 +1370,9 @@ async function init() {
     await loadProducts(true);
     await loadCart();
     
-    // Показать кнопку админки, если пользователь админ
     showAdminButton();
     
-    // === ОБРАБОТЧИКИ СОБЫТИЙ ===
-    
+    // ===== ОБРАБОТЧИКИ СОБЫТИЙ =====
     searchToggle?.addEventListener('click', toggleSearch);
     searchClear?.addEventListener('click', clearSearch);
     
@@ -1388,51 +1409,51 @@ async function init() {
     
     loadMoreBtn?.addEventListener('click', loadMore);
     
-    // Админка
+    // ===== АДМИН-КНОПКИ =====
     document.querySelectorAll('.admin-nav-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             switchTab(btn.dataset.tab);
         });
     });
     
-    $('addProductBtn')?.addEventListener('click', toggleProductForm);
-    $('productFormCancel')?.addEventListener('click', toggleProductForm);
-    $('productFormSubmit')?.addEventListener('click', saveProduct);
+    document.getElementById('addProductBtn')?.addEventListener('click', toggleProductForm);
+    document.getElementById('productFormCancel')?.addEventListener('click', toggleProductForm);
+    document.getElementById('productFormSubmit')?.addEventListener('click', saveProduct);
     
-    $('addPromoBtn')?.addEventListener('click', togglePromoForm);
-    $('promoFormCancel')?.addEventListener('click', togglePromoForm);
-    $('promoFormSubmit')?.addEventListener('click', savePromo);
+    document.getElementById('addCategoryBtn')?.addEventListener('click', toggleCategoryForm);
+    document.getElementById('categoryFormCancel')?.addEventListener('click', toggleCategoryForm);
+    document.getElementById('categoryFormSubmit')?.addEventListener('click', saveCategory);
     
-    $('addFaqBtn')?.addEventListener('click', toggleFaqForm);
-    $('faqFormCancel')?.addEventListener('click', toggleFaqForm);
-    $('faqFormSubmit')?.addEventListener('click', saveFaq);
+    document.getElementById('addPromoBtn')?.addEventListener('click', togglePromoForm);
+    document.getElementById('promoFormCancel')?.addEventListener('click', togglePromoForm);
+    document.getElementById('promoFormSubmit')?.addEventListener('click', savePromo);
     
-    $('addCategoryBtn')?.addEventListener('click', toggleCategoryForm);
-    $('categoryFormCancel')?.addEventListener('click', toggleCategoryForm);
-    $('categoryFormSubmit')?.addEventListener('click', saveCategory);
+    document.getElementById('addFaqBtn')?.addEventListener('click', toggleFaqForm);
+    document.getElementById('faqFormCancel')?.addEventListener('click', toggleFaqForm);
+    document.getElementById('faqFormSubmit')?.addEventListener('click', saveFaq);
     
-    $('banUserBtn')?.addEventListener('click', banUser);
-    $('settingsSaveBtn')?.addEventListener('click', saveSettings);
-    $('sendAllBtn')?.addEventListener('click', openSendAll);
-    $('sendAllClose')?.addEventListener('click', closeSendAll);
-    $('sendAllSubmit')?.addEventListener('click', sendAll);
-    $('refreshBtn')?.addEventListener('click', () => {
+    document.getElementById('banUserBtn')?.addEventListener('click', banUser);
+    document.getElementById('settingsSaveBtn')?.addEventListener('click', saveSettings);
+    document.getElementById('sendAllBtn')?.addEventListener('click', openSendAll);
+    document.getElementById('sendAllClose')?.addEventListener('click', closeSendAll);
+    document.getElementById('sendAllSubmit')?.addEventListener('click', sendAll);
+    document.getElementById('refreshBtn')?.addEventListener('click', () => {
         switchTab(adminTab);
         showToast('🔄 Обновлено', 'info');
     });
     
-    $('adminSearchInput')?.addEventListener('input', () => {
+    document.getElementById('adminSearchInput')?.addEventListener('input', () => {
         clearTimeout(window.searchTimeout);
         window.searchTimeout = setTimeout(loadAdminProducts, 300);
     });
-    $('adminCategoryFilter')?.addEventListener('change', loadAdminProducts);
-    $('orderStatusFilter')?.addEventListener('change', loadAdminOrders);
+    document.getElementById('adminCategoryFilter')?.addEventListener('change', loadAdminProducts);
+    document.getElementById('orderStatusFilter')?.addEventListener('change', loadAdminOrders);
     
-    $('confirmCancel')?.addEventListener('click', () => {
-        $('confirmModal').classList.remove('open');
+    document.getElementById('confirmCancel')?.addEventListener('click', () => {
+        document.getElementById('confirmModal')?.classList.remove('open');
     });
-    $('confirmOk')?.addEventListener('click', () => {
-        $('confirmModal').classList.remove('open');
+    document.getElementById('confirmOk')?.addEventListener('click', () => {
+        document.getElementById('confirmModal')?.classList.remove('open');
         if (window._confirmAction) {
             window._confirmAction();
             window._confirmAction = null;
@@ -1446,6 +1467,11 @@ async function init() {
         if (productId) {
             setTimeout(() => openProduct(productId), 500);
         }
+    }
+    
+    // Если открыта админка — грузим дашборд
+    if (window.location.pathname.includes('/admin')) {
+        switchTab('dashboard');
     }
     
     console.log('🚀 FAKESHOP Mini App инициализирован');

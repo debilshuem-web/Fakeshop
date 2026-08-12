@@ -10,11 +10,11 @@ RUN apt-get update && apt-get install -y \
 # Копируем весь проект
 COPY . .
 
-# Устанавливаем все зависимости (включая jinja2)
+# Устанавливаем зависимости с фиксированной версией aiogram 2.x
 RUN pip install --no-cache-dir \
     fastapi \
     uvicorn[standard] \
-    aiogram \
+    aiogram==2.25.1 \
     python-dotenv \
     aiohttp \
     python-multipart \

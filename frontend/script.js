@@ -12,6 +12,9 @@ let currentProductId = null;
 let appliedPromo = null;
 let selectedProductIds = [];
 
+// ========== АДМИНЫ ==========
+const ADMIN_IDS = [1886614664, 8814572765];
+
 // Telegram WebApp
 const tg = window.Telegram?.WebApp || {
     initDataUnsafe: { user: { id: 0 } },
@@ -89,7 +92,6 @@ let toastTimeout = null;
 function showToast(message, type = 'info', duration = 3000) {
     toast.textContent = message;
     toast.className = 'toast ' + type;
-    // Принудительный reflow для перезапуска анимации
     void toast.offsetWidth;
     toast.classList.add('show');
     
@@ -126,16 +128,28 @@ async function apiRequest(url, options = {}) {
 }
 
 // ========================================
+// ПРОВЕРКА АДМИНА
+// ========================================
+function isAdmin() {
+    return ADMIN_IDS.includes(USER_ID);
+}
+
+function showAdminButton() {
+    const btn = document.getElementById('adminBtn');
+    if (btn && isAdmin()) {
+        btn.style.display = 'flex';
+    }
+}
+
+// ========================================
 // ЗАГРУЗКА КАТЕГОРИЙ
 // ========================================
 async function loadCategories() {
     try {
         const categories = await apiRequest('/api/categories');
         
-        // Очищаем контейнер, оставляем только "Все"
         categoriesContainer.innerHTML = '';
         
-        // Добавляем кнопку "Все"
         const allBtn = document.createElement('button');
         allBtn.className = 'category-btn active';
         allBtn.dataset.category = 'Все';
@@ -143,7 +157,6 @@ async function loadCategories() {
         allBtn.onclick = () => selectCategory('Все');
         categoriesContainer.appendChild(allBtn);
         
-        // Добавляем остальные категории
         categories.forEach(cat => {
             if (cat.name !== 'Все') {
                 const btn = document.createElement('button');
@@ -191,7 +204,6 @@ function selectCategory(category) {
     hasMore = true;
     productsGrid.innerHTML = '';
     
-    // Обновляем активную кнопку
     document.querySelectorAll('.category-btn').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.category === category);
     });
@@ -297,7 +309,7 @@ function createProductCard(product) {
 }
 
 // ========================================
-// ОТКРЫТИЕ КАРТОЧКИ ТОВАРА (МОДАЛКА)
+// ОТКРЫТИЕ КАРТОЧКИ ТОВАРА
 // ========================================
 async function openProduct(productId) {
     try {
@@ -340,7 +352,7 @@ function closeModal() {
 }
 
 // ========================================
-// ПОДЕЛИТЬСЯ ТОВАРОМ
+// ПОДЕЛИТЬСЯ
 // ========================================
 function shareProduct(productId) {
     const shareUrl = `${window.location.origin}?start=product_${productId}`;
@@ -353,11 +365,9 @@ function shareProduct(productId) {
             url: shareUrl
         }).catch(() => {});
     } else {
-        // Копируем в буфер
         navigator.clipboard.writeText(text).then(() => {
             showToast('🔗 Ссылка скопирована! Отправь другу', 'success');
         }).catch(() => {
-            // fallback
             const textarea = document.createElement('textarea');
             textarea.value = text;
             document.body.appendChild(textarea);
@@ -452,7 +462,6 @@ async function updateCartQty(productId, delta) {
         return;
     }
     
-    // Обновляем через API — сначала удаляем, потом добавляем с новым количеством
     try {
         await apiRequest(`/api/cart/${USER_ID}/${productId}`, {
             method: 'DELETE'
@@ -502,7 +511,6 @@ async function buyNow(productId) {
             return;
         }
         
-        // Открываем форму заказа с этим товаром
         selectedProductIds = [productId];
         openOrderForm();
     } catch (error) {
@@ -511,7 +519,7 @@ async function buyNow(productId) {
 }
 
 // ========================================
-// ОФОРМЛЕНИЕ ЗАКАЗА (из корзины)
+// ОФОРМЛЕНИЕ ЗАКАЗА
 // ========================================
 function checkoutFromCart() {
     if (cartItems.length === 0) {
@@ -528,8 +536,6 @@ function openOrderForm() {
     orderForm.style.display = 'block';
     orderSuccess.style.display = 'none';
     orderModalOverlay.classList.add('open');
-    
-    // Подсчет суммы
     updateOrderSummary();
 }
 
@@ -546,7 +552,6 @@ function closeOrderModal() {
 // ========================================
 async function updateOrderSummary() {
     try {
-        // Получаем цены товаров
         let total = 0;
         for (const pid of selectedProductIds) {
             const product = await apiRequest(`/api/products/${pid}`);
@@ -634,12 +639,10 @@ async function submitOrder() {
             body: JSON.stringify(orderData)
         });
         
-        // Показываем успех
         orderForm.style.display = 'none';
         orderSuccess.style.display = 'block';
         orderNumberText.innerHTML = `Номер заказа: <strong>${result.order_number || '#' + result.order_id}</strong>`;
         
-        // Очищаем корзину
         await loadCart();
         showToast('✅ Заказ оформлен! Менеджер свяжется с вами', 'success');
         
@@ -692,7 +695,6 @@ let adminTab = 'dashboard';
 function switchTab(tab) {
     adminTab = tab;
     
-    // Скрываем все табы
     document.querySelectorAll('.admin-tab').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.admin-nav-btn').forEach(el => el.classList.remove('active'));
     
@@ -702,7 +704,6 @@ function switchTab(tab) {
     const targetBtn = document.querySelector(`.admin-nav-btn[data-tab="${tab}"]`);
     if (targetBtn) targetBtn.classList.add('active');
     
-    // Загружаем данные для таба
     switch (tab) {
         case 'dashboard': loadDashboard(); break;
         case 'products': loadAdminProducts(); break;
@@ -712,6 +713,7 @@ function switchTab(tab) {
         case 'banned': loadBannedUsers(); break;
         case 'settings': loadSettings(); break;
         case 'reviews': loadAdminReviews(); break;
+        case 'categories': loadAdminCategories(); break;
     }
 }
 
@@ -760,6 +762,7 @@ async function loadAdminProducts() {
                     <div class="list-item-sub">
                         ${p.price} BYN · ${p.quantity} шт · ${p.category || 'Все'}
                         ${p.quantity > 0 ? '✅' : '❌'}
+                        ${p.from_china ? '🌏 Из Китая' : ''}
                     </div>
                 </div>
                 <div class="list-item-actions">
@@ -785,6 +788,7 @@ function toggleProductForm() {
         $('productCategory').value = 'Все';
         $('productPhoto').value = '';
         $('productNote').value = '';
+        $('productFromChina').checked = false;
         $('productFormSubmit').dataset.productId = '';
         $('productFormSubmit').textContent = '✅ Сохранить';
     }
@@ -797,6 +801,7 @@ async function saveProduct() {
     const category = $('productCategory').value;
     const photo = $('productPhoto').value.trim();
     const note = $('productNote').value.trim();
+    const from_china = $('productFromChina')?.checked ? 1 : 0;
     const editId = $('productFormSubmit').dataset.productId;
     
     if (!name || isNaN(price) || isNaN(quantity)) {
@@ -804,7 +809,7 @@ async function saveProduct() {
         return;
     }
     
-    const data = { name, price, quantity, category, photo, note };
+    const data = { name, price, quantity, category, photo, note, from_china };
     
     try {
         if (editId) {
@@ -840,6 +845,9 @@ async function editProduct(id) {
         $('productCategory').value = product.category || 'Все';
         $('productPhoto').value = product.photo || '';
         $('productNote').value = product.note || '';
+        if ($('productFromChina')) {
+            $('productFromChina').checked = product.from_china == 1;
+        }
         $('productFormSubmit').dataset.productId = id;
         $('productFormSubmit').textContent = '💾 Обновить';
     } catch (error) {
@@ -856,6 +864,105 @@ async function deleteProduct(id) {
         loadProducts(true);
     } catch (error) {
         showToast('Ошибка удаления', 'error');
+    }
+}
+
+// ========================================
+// АДМИН: КАТЕГОРИИ (CRUD)
+// ========================================
+async function loadAdminCategories() {
+    const list = $('adminCategoriesList');
+    if (!list) return;
+    list.innerHTML = '<div class="skeleton-card" style="height:40px;"></div>';
+    
+    try {
+        const categories = await apiRequest('/api/categories');
+        
+        if (categories.length === 0) {
+            list.innerHTML = '<div class="empty-state"><p>Категорий нет</p></div>';
+            return;
+        }
+        
+        list.innerHTML = categories.map(c => `
+            <div class="list-item">
+                <div class="list-item-info">
+                    <div class="list-item-title">${c.icon || '📁'} ${c.name}</div>
+                    <div class="list-item-sub">ID: ${c.id} · ${c.name !== 'Все' ? 'Можно удалить' : 'Системная'}</div>
+                </div>
+                ${c.name !== 'Все' ? `
+                <div class="list-item-actions">
+                    <button class="edit-btn" onclick="editCategory(${c.id}, '${c.name}', '${c.icon || ''}')" title="Изменить"><i class="fas fa-pen"></i></button>
+                    <button class="delete-btn" onclick="deleteCategory(${c.id})" title="Удалить"><i class="fas fa-trash"></i></button>
+                </div>
+                ` : `<span class="status-badge completed">Системная</span>`}
+            </div>
+        `).join('');
+    } catch (error) {
+        list.innerHTML = '<div class="empty-state"><p>Ошибка загрузки</p></div>';
+    }
+}
+
+function toggleCategoryForm() {
+    const container = $('categoryFormContainer');
+    if (!container) return;
+    container.style.display = container.style.display === 'none' ? 'block' : 'none';
+    if (container.style.display === 'block') {
+        $('categoryName').value = '';
+        $('categoryIcon').value = '';
+        $('categoryFormSubmit').dataset.categoryId = '';
+        $('categoryFormSubmit').textContent = '✅ Сохранить';
+    }
+}
+
+async function saveCategory() {
+    const name = $('categoryName').value.trim();
+    const icon = $('categoryIcon').value.trim();
+    const editId = $('categoryFormSubmit').dataset.categoryId;
+    
+    if (!name) {
+        showToast('Введите название категории', 'error');
+        return;
+    }
+    
+    try {
+        if (editId) {
+            await apiRequest(`/api/categories/${editId}`, {
+                method: 'PUT',
+                body: JSON.stringify({ name, icon, user_id: USER_ID })
+            });
+            showToast('✅ Категория обновлена', 'success');
+        } else {
+            await apiRequest('/api/categories', {
+                method: 'POST',
+                body: JSON.stringify({ name, icon, user_id: USER_ID })
+            });
+            showToast('✅ Категория создана', 'success');
+        }
+        toggleCategoryForm();
+        loadAdminCategories();
+        loadCategories();
+    } catch (error) {
+        showToast(error.message || 'Ошибка', 'error');
+    }
+}
+
+function editCategory(id, name, icon) {
+    toggleCategoryForm();
+    $('categoryName').value = name;
+    $('categoryIcon').value = icon;
+    $('categoryFormSubmit').dataset.categoryId = id;
+    $('categoryFormSubmit').textContent = '💾 Обновить';
+}
+
+async function deleteCategory(id) {
+    if (!confirm('🗑️ Удалить категорию? Товары перенесутся в "Все".')) return;
+    try {
+        await apiRequest(`/api/categories/${id}?user_id=${USER_ID}`, { method: 'DELETE' });
+        showToast('🗑️ Категория удалена', 'info');
+        loadAdminCategories();
+        loadCategories();
+    } catch (error) {
+        showToast(error.message || 'Ошибка удаления', 'error');
     }
 }
 
@@ -1047,8 +1154,9 @@ async function saveFaq() {
     }
     
     try {
-        await apiRequest(`/api/faq?question=${encodeURIComponent(question)}&answer=${encodeURIComponent(answer)}`, {
-            method: 'POST'
+        await apiRequest('/api/faq', {
+            method: 'POST',
+            body: JSON.stringify({ question, answer })
         });
         showToast('✅ FAQ добавлен', 'success');
         toggleFaqForm();
@@ -1142,6 +1250,7 @@ async function loadSettings() {
             $('settingDelivery').value = data.delivery_info || '';
             $('settingPayment').value = data.payment_info || '';
             $('settingMaintenance').value = data.maintenance_mode || 'false';
+            $('settingReviewsChannel').value = data.reviews_channel || '';
         }
     } catch (error) {
         console.error('Ошибка загрузки настроек:', error);
@@ -1155,7 +1264,8 @@ async function saveSettings() {
         contact_manager: $('settingContactManager').value.trim(),
         delivery_info: $('settingDelivery').value.trim(),
         payment_info: $('settingPayment').value.trim(),
-        maintenance_mode: $('settingMaintenance').value
+        maintenance_mode: $('settingMaintenance').value,
+        reviews_channel: $('settingReviewsChannel').value.trim()
     };
     
     try {
@@ -1216,7 +1326,6 @@ async function sendAll() {
     if (!confirm(`Отправить рассылку ${text.length} символов всем пользователям?`)) return;
     
     try {
-        // Отправляем через бота (через API админа)
         await apiRequest('/api/send_all', {
             method: 'POST',
             body: JSON.stringify({ text })
@@ -1234,18 +1343,15 @@ async function sendAll() {
 async function init() {
     tg.ready();
     
-    // Загружаем категории
     await loadCategories();
-    
-    // Загружаем товары
     await loadProducts(true);
-    
-    // Загружаем корзину
     await loadCart();
+    
+    // Показать кнопку админки, если пользователь админ
+    showAdminButton();
     
     // === ОБРАБОТЧИКИ СОБЫТИЙ ===
     
-    // Поиск
     searchToggle?.addEventListener('click', toggleSearch);
     searchClear?.addEventListener('click', clearSearch);
     
@@ -1259,19 +1365,16 @@ async function init() {
         }
     });
     
-    // Корзина
     cartBtn?.addEventListener('click', openCart);
     cartClose?.addEventListener('click', closeCart);
     cartOverlay?.addEventListener('click', closeCart);
     checkoutBtn?.addEventListener('click', checkoutFromCart);
     
-    // Модалка
     modalClose?.addEventListener('click', closeModal);
     modalOverlay?.addEventListener('click', (e) => {
         if (e.target === modalOverlay) closeModal();
     });
     
-    // Заказ
     orderModalClose?.addEventListener('click', closeOrderModal);
     orderModalOverlay?.addEventListener('click', (e) => {
         if (e.target === orderModalOverlay) closeOrderModal();
@@ -1283,7 +1386,6 @@ async function init() {
         if (e.key === 'Enter') applyPromo();
     });
     
-    // Загрузка еще
     loadMoreBtn?.addEventListener('click', loadMore);
     
     // Админка
@@ -1293,7 +1395,6 @@ async function init() {
         });
     });
     
-    // Кнопки админки
     $('addProductBtn')?.addEventListener('click', toggleProductForm);
     $('productFormCancel')?.addEventListener('click', toggleProductForm);
     $('productFormSubmit')?.addEventListener('click', saveProduct);
@@ -1306,6 +1407,10 @@ async function init() {
     $('faqFormCancel')?.addEventListener('click', toggleFaqForm);
     $('faqFormSubmit')?.addEventListener('click', saveFaq);
     
+    $('addCategoryBtn')?.addEventListener('click', toggleCategoryForm);
+    $('categoryFormCancel')?.addEventListener('click', toggleCategoryForm);
+    $('categoryFormSubmit')?.addEventListener('click', saveCategory);
+    
     $('banUserBtn')?.addEventListener('click', banUser);
     $('settingsSaveBtn')?.addEventListener('click', saveSettings);
     $('sendAllBtn')?.addEventListener('click', openSendAll);
@@ -1316,7 +1421,6 @@ async function init() {
         showToast('🔄 Обновлено', 'info');
     });
     
-    // Фильтры в админке
     $('adminSearchInput')?.addEventListener('input', () => {
         clearTimeout(window.searchTimeout);
         window.searchTimeout = setTimeout(loadAdminProducts, 300);
@@ -1324,20 +1428,17 @@ async function init() {
     $('adminCategoryFilter')?.addEventListener('change', loadAdminProducts);
     $('orderStatusFilter')?.addEventListener('change', loadAdminOrders);
     
-    // Закрытие модалки подтверждения
     $('confirmCancel')?.addEventListener('click', () => {
         $('confirmModal').classList.remove('open');
     });
     $('confirmOk')?.addEventListener('click', () => {
         $('confirmModal').classList.remove('open');
-        // Выполняем сохраненное действие
         if (window._confirmAction) {
             window._confirmAction();
             window._confirmAction = null;
         }
     });
     
-    // Обработка deep link (поделиться)
     const params = new URLSearchParams(window.location.search);
     const startParam = params.get('start');
     if (startParam && startParam.startsWith('product_')) {
@@ -1349,8 +1450,8 @@ async function init() {
     
     console.log('🚀 FAKESHOP Mini App инициализирован');
     console.log(`👤 User ID: ${USER_ID}`);
-    console.log(`📱 App URL: ${API_URL}`);
+    console.log(`👑 Админ: ${isAdmin() ? 'ДА' : 'НЕТ'}`);
 }
 
-// Запуск после загрузки DOM
+// Запуск
 document.addEventListener('DOMContentLoaded', init);

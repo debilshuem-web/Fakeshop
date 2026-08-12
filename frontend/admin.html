@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>FAKESHOP — Админ-панель</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body>
+    <!-- ========== ШАПКА ========== -->
+    <header class="header admin-header">
+        <div class="header-top">
+            <div class="header-left">
+                <span class="logo">👑 FAKESHOP</span>
+                <span class="admin-badge">ADMIN</span>
+            </div>
+            <div class="header-right">
+                <button class="header-btn" id="refreshBtn" title="Обновить">
+                    <i class="fas fa-sync-alt"></i>
+                </button>
+                <button class="header-btn" id="adminMenuToggle">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- ========== НАВИГАЦИЯ (табы) ========== -->
+    <nav class="admin-nav" id="adminNav">
+        <button class="admin-nav-btn active" data-tab="dashboard">
+            <i class="fas fa-chart-pie"></i>
+            <span>Дашборд</span>
+        </button>
+        <button class="admin-nav-btn" data-tab="products">
+            <i class="fas fa-box"></i>
+            <span>Товары</span>
+        </button>
+        <button class="admin-nav-btn" data-tab="orders">
+            <i class="fas fa-clipboard-list"></i>
+            <span>Заявки</span>
+        </button>
+        <button class="admin-nav-btn" data-tab="promocodes">
+            <i class="fas fa-tags"></i>
+            <span>Промокоды</span>
+        </button>
+        <button class="admin-nav-btn" data-tab="faq">
+            <i class="fas fa-question-circle"></i>
+            <span>FAQ</span>
+        </button>
+        <button class="admin-nav-btn" data-tab="banned">
+            <i class="fas fa-ban"></i>
+            <span>Бан-лист</span>
+        </button>
+        <button class="admin-nav-btn" data-tab="settings">
+            <i class="fas fa-cog"></i>
+            <span>Настройки</span>
+        </button>
+        <button class="admin-nav-btn" data-tab="reviews">
+            <i class="fas fa-star"></i>
+            <span>Отзывы</span>
+        </button>
+    </nav>
+
+    <!-- ========== ОСНОВНОЙ КОНТЕНТ ========== -->
+    <main class="admin-content" id="adminContent">
+
+        <!-- ===== ДАШБОРД ===== -->
+        <section class="admin-tab active" id="tab-dashboard">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon"><i class="fas fa-box"></i></div>
+                    <div class="stat-info">
+                        <span class="stat-value" id="statProducts">0</span>
+                        <span class="stat-label">Товаров</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon"><i class="fas fa-clipboard-list"></i></div>
+                    <div class="stat-info">
+                        <span class="stat-value" id="statOrders">0</span>
+                        <span class="stat-label">Заказов</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon"><i class="fas fa-money-bill-wave"></i></div>
+                    <div class="stat-info">
+                        <span class="stat-value" id="statRevenue">0 BYN</span>
+                        <span class="stat-label">Выручка</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon"><i class="fas fa-users"></i></div>
+                    <div class="stat-info">
+                        <span class="stat-value" id="statUsers">0</span>
+                        <span class="stat-label">Покупателей</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon"><i class="fas fa-calendar-day"></i></div>
+                    <div class="stat-info">
+                        <span class="stat-value" id="statTodayOrders">0</span>
+                        <span class="stat-label">Заказов сегодня</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="quick-actions">
+                <button class="quick-action-btn" onclick="switchTab('products')">
+                    <i class="fas fa-plus-circle"></i> Добавить товар
+                </button>
+                <button class="quick-action-btn" onclick="switchTab('orders')">
+                    <i class="fas fa-eye"></i> Смотреть заявки
+                </button>
+                <button class="quick-action-btn" id="sendAllBtn">
+                    <i class="fas fa-bullhorn"></i> Сделать рассылку
+                </button>
+            </div>
+        </section>
+
+        <!-- ===== ТОВАРЫ ===== -->
+        <section class="admin-tab" id="tab-products">
+            <div class="tab-header">
+                <h2><i class="fas fa-box"></i> Управление товарами</h2>
+                <button class="add-btn" id="addProductBtn"><i class="fas fa-plus"></i> Добавить</button>
+            </div>
+
+            <!-- Форма добавления товара -->
+            <div class="product-form-container" id="productFormContainer" style="display: none;">
+                <div class="product-form">
+                    <h3 id="productFormTitle">➕ Новый товар</h3>
+                    <div class="form-group">
+                        <label>Название товара *</label>
+                        <input type="text" id="productName" placeholder="Например: Свитшот Cav empt">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Цена (BYN) *</label>
+                            <input type="number" id="productPrice" placeholder="90" step="0.01">
+                        </div>
+                        <div class="form-group">
+                            <label>Количество *</label>
+                            <input type="number" id="productQuantity" placeholder="5">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Категория</label>
+                        <select id="productCategory">
+                            <option value="Все">Все</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Фото (ссылка или ID файла)</label>
+                        <input type="text" id="productPhoto" placeholder="https://... или file_id">
+                    </div>
+                    <div class="form-group">
+                        <label>Примечание (опционально)</label>
+                        <textarea id="productNote" placeholder="Оригинал, качество, состав..."></textarea>
+                    </div>
+                    <div class="form-actions">
+                        <button class="cancel-btn" id="productFormCancel">Отмена</button>
+                        <button class="submit-btn" id="productFormSubmit">✅ Сохранить</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Список товаров -->
+            <div class="products-list-container">
+                <div class="list-controls">
+                    <input type="text" id="adminSearchInput" placeholder="Поиск товаров..." class="search-input">
+                    <select id="adminCategoryFilter">
+                        <option value="Все">Все категории</option>
+                    </select>
+                </div>
+                <div class="products-list" id="adminProductsList">
+                    <!-- Товары подгружаются сюда -->
+                </div>
+            </div>
+        </section>
+
+        <!-- ===== ЗАЯВКИ ===== -->
+        <section class="admin-tab" id="tab-orders">
+            <div class="tab-header">
+                <h2><i class="fas fa-clipboard-list"></i> Заявки</h2>
+                <div class="order-filters">
+                    <select id="orderStatusFilter">
+                        <option value="all">Все статусы</option>
+                        <option value="new">🟢 Новые</option>
+                        <option value="processing">🟡 В обработке</option>
+                        <option value="completed">✅ Завершены</option>
+                        <option value="cancelled">❌ Отменены</option>
+                    </select>
+                </div>
+            </div>
+            <div class="orders-list" id="adminOrdersList">
+                <!-- Заявки подгружаются сюда -->
+            </div>
+        </section>
+
+        <!-- ===== ПРОМОКОДЫ ===== -->
+        <section class="admin-tab" id="tab-promocodes">
+            <div class="tab-header">
+                <h2><i class="fas fa-tags"></i> Промокоды</h2>
+                <button class="add-btn" id="addPromoBtn"><i class="fas fa-plus"></i> Создать</button>
+            </div>
+
+            <!-- Форма создания промокода -->
+            <div class="promo-form-container" id="promoFormContainer" style="display: none;">
+                <div class="promo-form">
+                    <h3>🏷️ Новый промокод</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Код *</label>
+                            <input type="text" id="promoCode" placeholder="SUMMER2026" style="text-transform: uppercase;">
+                        </div>
+                        <div class="form-group">
+                            <label>Скидка (%) *</label>
+                            <input type="number" id="promoDiscount" placeholder="10" min="1" max="100">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Мин. сумма заказа</label>
+                            <input type="number" id="promoMinOrder" placeholder="0" value="0">
+                        </div>
+                        <div class="form-group">
+                            <label>Лимит использований</label>
+                            <input type="number" id="promoUsesLimit" placeholder="0 (безлимит)" value="0">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Действует до</label>
+                        <input type="datetime-local" id="promoExpiresAt">
+                    </div>
+                    <div class="form-actions">
+                        <button class="cancel-btn" id="promoFormCancel">Отмена</button>
+                        <button class="submit-btn" id="promoFormSubmit">✅ Создать</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="promocodes-list" id="adminPromoCodes">
+                <!-- Промокоды подгружаются сюда -->
+            </div>
+        </section>
+
+        <!-- ===== FAQ ===== -->
+        <section class="admin-tab" id="tab-faq">
+            <div class="tab-header">
+                <h2><i class="fas fa-question-circle"></i> FAQ</h2>
+                <button class="add-btn" id="addFaqBtn"><i class="fas fa-plus"></i> Добавить</button>
+            </div>
+
+            <!-- Форма добавления FAQ -->
+            <div class="faq-form-container" id="faqFormContainer" style="display: none;">
+                <div class="faq-form">
+                    <h3>❓ Новый FAQ</h3>
+                    <div class="form-group">
+                        <label>Вопрос *</label>
+                        <input type="text" id="faqQuestion" placeholder="Как сделать заказ?">
+                    </div>
+                    <div class="form-group">
+                        <label>Ответ *</label>
+                        <textarea id="faqAnswer" placeholder="Для заказа нажмите кнопку 'Купить'..."></textarea>
+                    </div>
+                    <div class="form-actions">
+                        <button class="cancel-btn" id="faqFormCancel">Отмена</button>
+                        <button class="submit-btn" id="faqFormSubmit">✅ Добавить</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="faq-list" id="adminFaqList">
+                <!-- FAQ подгружаются сюда -->
+            </div>
+        </section>
+
+        <!-- ===== БАН-ЛИСТ ===== -->
+        <section class="admin-tab" id="tab-banned">
+            <div class="tab-header">
+                <h2><i class="fas fa-ban"></i> Бан-лист</h2>
+            </div>
+            <div class="ban-form">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>ID пользователя</label>
+                        <input type="number" id="banUserId" placeholder="1886614664">
+                    </div>
+                    <div class="form-group">
+                        <label>Причина</label>
+                        <input type="text" id="banReason" placeholder="Нарушение правил">
+                    </div>
+                </div>
+                <button class="ban-btn" id="banUserBtn"><i class="fas fa-gavel"></i> Забанить</button>
+            </div>
+            <div class="banned-list" id="adminBannedList">
+                <!-- Бан-лист подгружается сюда -->
+            </div>
+        </section>
+
+        <!-- ===== НАСТРОЙКИ ===== -->
+        <section class="admin-tab" id="tab-settings">
+            <div class="tab-header">
+                <h2><i class="fas fa-cog"></i> Настройки магазина</h2>
+            </div>
+            <div class="settings-form" id="settingsForm">
+                <div class="form-group">
+                    <label>Название магазина</label>
+                    <input type="text" id="settingShopName" placeholder="FAKESHOP">
+                </div>
+                <div class="form-group">
+                    <label>Описание</label>
+                    <input type="text" id="settingShopDesc" placeholder="Стильная одежда и обувь">
+                </div>
+                <div class="form-group">
+                    <label>Контакт менеджера</label>
+                    <input type="text" id="settingContactManager" placeholder="@ManaReaper">
+                </div>
+                <div class="form-group">
+                    <label>Информация о доставке</label>
+                    <input type="text" id="settingDelivery" placeholder="Доставка по всей стране">
+                </div>
+                <div class="form-group">
+                    <label>Информация об оплате</label>
+                    <input type="text" id="settingPayment" placeholder="Оплата при получении">
+                </div>
+                <div class="form-group">
+                    <label>Режим техработ</label>
+                    <select id="settingMaintenance">
+                        <option value="false">🔓 Выключен</option>
+                        <option value="true">🔒 Включен</option>
+                    </select>
+                </div>
+                <button class="settings-save-btn" id="settingsSaveBtn">💾 Сохранить настройки</button>
+            </div>
+        </section>
+
+        <!-- ===== ОТЗЫВЫ ===== -->
+        <section class="admin-tab" id="tab-reviews">
+            <div class="tab-header">
+                <h2><i class="fas fa-star"></i> Отзывы</h2>
+            </div>
+            <div class="reviews-list" id="adminReviewsList">
+                <!-- Отзывы подгружаются сюда -->
+            </div>
+        </section>
+
+    </main>
+
+    <!-- ========== МОДАЛКА ПОДТВЕРЖДЕНИЯ ========== -->
+    <div class="modal-overlay" id="confirmModal">
+        <div class="modal-container confirm-modal">
+            <div class="modal-content">
+                <h3 id="confirmTitle">Подтверждение</h3>
+                <p id="confirmText">Вы уверены?</p>
+                <div class="confirm-actions">
+                    <button class="cancel-btn" id="confirmCancel">Отмена</button>
+                    <button class="danger-btn" id="confirmOk">Да, удалить</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== МОДАЛКА РАССЫЛКИ ========== -->
+    <div class="modal-overlay" id="sendAllModal">
+        <div class="modal-container sendall-modal">
+            <button class="modal-close" id="sendAllClose"><i class="fas fa-times"></i></button>
+            <div class="modal-content">
+                <h3>📢 Рассылка</h3>
+                <div class="form-group">
+                    <label>Текст сообщения</label>
+                    <textarea id="sendAllText" placeholder="Введите текст рассылки..." rows="5"></textarea>
+                </div>
+                <button class="submit-btn" id="sendAllSubmit">📨 Отправить всем</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== УВЕДОМЛЕНИЕ ========== -->
+    <div class="toast" id="toast"></div>
+
+    <script src="/static/script.js"></script>
+</body>
+</html>

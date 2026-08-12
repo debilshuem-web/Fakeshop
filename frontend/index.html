@@ -4,26 +4,20 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>FAKESHOP</title>
-    <!-- Подключаем Telegram WebApp -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <!-- Подключаем стили -->
     <link rel="stylesheet" href="/static/style.css">
-    <!-- Иконки (Font Awesome) -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
 <body>
-    <!-- ========== ШАПКА ========== -->
+    <!-- ===== ШАПКА ===== -->
     <header class="header">
         <div class="header-top">
             <div class="header-left">
                 <span class="logo">🔥 FAKESHOP</span>
             </div>
             <div class="header-right">
-                <button class="header-btn" id="searchToggle">
-                    <i class="fas fa-search"></i>
-                </button>
-                <!-- Кнопка админки (скрыта по умолчанию, показывается только админам) -->
-                <button class="header-btn" id="adminBtn" style="display: none;" onclick="location.href='/admin'">
+                <button class="header-btn" id="searchToggle"><i class="fas fa-search"></i></button>
+                <button class="header-btn" id="adminBtn" style="display:none;" onclick="location.href='/admin'">
                     <i class="fas fa-crown"></i>
                 </button>
                 <button class="header-btn" id="cartBtn">
@@ -32,44 +26,34 @@
                 </button>
             </div>
         </div>
-        <!-- Поисковая строка (скрыта по умолчанию) -->
         <div class="search-container" id="searchContainer">
             <input type="text" id="searchInput" placeholder="Поиск товаров..." class="search-input">
             <button class="search-clear" id="searchClear"><i class="fas fa-times"></i></button>
         </div>
-        <!-- Категории (горизонтальный скролл) -->
         <div class="categories-scroll" id="categoriesContainer">
             <button class="category-btn active" data-category="Все">Все</button>
-            <!-- Остальные категории подгрузятся из API -->
         </div>
     </header>
 
-    <!-- ========== ОСНОВНОЙ КОНТЕНТ ========== -->
-    <main class="main-content" id="mainContent">
-        <!-- Скелетон загрузки -->
+    <!-- ===== ОСНОВНОЙ КОНТЕНТ ===== -->
+    <main class="main-content">
         <div class="skeleton-grid" id="skeletonGrid">
             <div class="skeleton-card"></div>
             <div class="skeleton-card"></div>
             <div class="skeleton-card"></div>
             <div class="skeleton-card"></div>
         </div>
-        
-        <!-- Сетка товаров -->
         <div class="products-grid" id="productsGrid"></div>
-        
-        <!-- Кнопка "Загрузить еще" -->
-        <div class="load-more-container" id="loadMoreContainer" style="display: none;">
+        <div class="load-more-container" id="loadMoreContainer" style="display:none;">
             <button class="load-more-btn" id="loadMoreBtn">Загрузить еще</button>
         </div>
-        
-        <!-- Сообщение "Товаров нет" -->
-        <div class="empty-state" id="emptyState" style="display: none;">
+        <div class="empty-state" id="emptyState" style="display:none;">
             <i class="fas fa-box-open"></i>
             <p>Товаров не найдено</p>
         </div>
     </main>
 
-    <!-- ========== КОРЗИНА (выезжающая панель) ========== -->
+    <!-- ===== КОРЗИНА ===== -->
     <div class="cart-overlay" id="cartOverlay"></div>
     <div class="cart-panel" id="cartPanel">
         <div class="cart-header">
@@ -83,7 +67,7 @@
             </div>
             <div class="cart-items" id="cartItems"></div>
         </div>
-        <div class="cart-footer" id="cartFooter" style="display: none;">
+        <div class="cart-footer" id="cartFooter" style="display:none;">
             <div class="cart-total">
                 <span>Итого:</span>
                 <span class="cart-total-price" id="cartTotal">0 BYN</span>
@@ -92,22 +76,20 @@
         </div>
     </div>
 
-    <!-- ========== МОДАЛКА ТОВАРА ========== -->
+    <!-- ===== МОДАЛКА ТОВАРА ===== -->
     <div class="modal-overlay" id="modalOverlay">
-        <div class="modal-container" id="modalContainer">
+        <div class="modal-container">
             <button class="modal-close" id="modalClose"><i class="fas fa-times"></i></button>
-            <div class="modal-content" id="modalContent">
-                <!-- Сюда подгружается карточка товара -->
-            </div>
+            <div class="modal-content" id="modalContent"></div>
         </div>
     </div>
 
-    <!-- ========== МОДАЛКА ЗАКАЗА ========== -->
+    <!-- ===== МОДАЛКА ЗАКАЗА ===== -->
     <div class="modal-overlay" id="orderModalOverlay">
-        <div class="modal-container order-modal" id="orderModalContainer">
+        <div class="modal-container order-modal">
             <button class="modal-close" id="orderModalClose"><i class="fas fa-times"></i></button>
             <div class="modal-content" id="orderModalContent">
-                <div class="order-success" id="orderSuccess" style="display: none;">
+                <div class="order-success" id="orderSuccess" style="display:none;">
                     <i class="fas fa-check-circle"></i>
                     <h2>Заказ оформлен!</h2>
                     <p id="orderNumberText">Номер заказа: <strong>#FAKE-2026...</strong></p>
@@ -141,7 +123,7 @@
                             <span>Товары:</span>
                             <span id="orderSubtotal">0 BYN</span>
                         </div>
-                        <div class="order-summary-row discount-row" id="discountRow" style="display: none;">
+                        <div class="order-summary-row discount-row" id="discountRow" style="display:none;">
                             <span>Скидка:</span>
                             <span id="orderDiscount">-0 BYN</span>
                         </div>
@@ -156,10 +138,9 @@
         </div>
     </div>
 
-    <!-- ========== УВЕДОМЛЕНИЕ ========== -->
+    <!-- ===== УВЕДОМЛЕНИЕ ===== -->
     <div class="toast" id="toast"></div>
 
-    <!-- Подключаем JavaScript -->
     <script src="/static/script.js"></script>
 </body>
 </html>

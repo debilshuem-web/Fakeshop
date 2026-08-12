@@ -10,10 +10,12 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 import uvicorn
 from dotenv import load_dotenv
+import re
 
 load_dotenv()
 
 PORT = int(os.getenv("PORT", 8000))
+ADMIN_IDS = [1886614664, 8814572765]  # Ты и второй админ
 
 # ========== ЛОГИ ==========
 logging.basicConfig(level=logging.INFO)
@@ -42,6 +44,7 @@ def init_db():
         photo TEXT,
         note TEXT,
         category TEXT DEFAULT 'Все',
+        from_china INTEGER DEFAULT 0,
         views INTEGER DEFAULT 0,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
@@ -94,7 +97,7 @@ def init_db():
     """)
     
     # Добавляем категории по умолчанию
-    default_categories = ['Все', 'Футболки', 'Свитшоты', 'Кроссовки', 'Штаны', 'Аксессуары']
+    default_categories = ['Все', 'Футболки', 'Свитшоты', 'Кроссовки', 'Штаны', 'Аксессуары', 'Из Китая']
     for cat in default_categories:
         cur.execute("INSERT OR IGNORE INTO categories (name) VALUES (?)", (cat,))
     
@@ -131,7 +134,7 @@ def init_db():
     )
     """)
     
-    # Отзывы
+    # Отзывы (локальные)
     cur.execute("""
     CREATE TABLE IF NOT EXISTS reviews (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -160,7 +163,8 @@ def init_db():
         'maintenance_mode': 'false',
         'contact_manager': '@ManaReaper',
         'delivery_info': 'Доставка по всей стране',
-        'payment_info': 'Оплата при получении'
+        'payment_info': 'Оплата при получении',
+        'reviews_channel': '@TestimonialFAKESTORE'
     }
     for key, value in default_settings.items():
         cur.execute("INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)", (key, value))
@@ -179,6 +183,7 @@ class ProductCreate(BaseModel):
     note: Optional[str] = ""
     category: Optional[str] = "Все"
     photo: Optional[str] = None
+    from_china: Optional[int] = 0
 
 class ProductUpdate(BaseModel):
     name: Optional[str] = None
@@ -187,6 +192,7 @@ class ProductUpdate(BaseModel):
     note: Optional[str] = None
     category: Optional[str] = None
     photo: Optional[str] = None
+    from_china: Optional[int] = None
 
 class CartItem(BaseModel):
     product_id: int
@@ -221,6 +227,16 @@ class ReviewCreate(BaseModel):
     text: str
     product_id: Optional[int] = None
 
+class CategoryCreate(BaseModel):
+    name: str
+    icon: Optional[str] = ""
+    user_id: int
+
+class CategoryUpdate(BaseModel):
+    name: str
+    icon: Optional[str] = ""
+    user_id: int
+
 class SettingsUpdate(BaseModel):
     shop_name: Optional[str] = None
     shop_description: Optional[str] = None
@@ -228,9 +244,10 @@ class SettingsUpdate(BaseModel):
     contact_manager: Optional[str] = None
     delivery_info: Optional[str] = None
     payment_info: Optional[str] = None
+    reviews_channel: Optional[str] = None
 
 # ========== FASTAPI ==========
-app = FastAPI(title="FAKESHOP Mini App API", version="1.0.0")
+app = FastAPI(title="FAKESHOP Mini App API", version="2.0.0")
 
 # ========== СТАТИКА ==========
 os.makedirs("frontend", exist_ok=True)
@@ -259,6 +276,10 @@ def check_ban(user_id: int):
     result = cur.fetchone()
     conn.close()
     return result is not None
+
+def is_admin(user_id: int):
+    """Проверка, является ли пользователь админом"""
+    return user_id in ADMIN_IDS
 
 # ========== ОСНОВНЫЕ РОУТЫ ==========
 @app.get("/")
@@ -307,9 +328,10 @@ async def update_settings(data: SettingsUpdate):
     conn.close()
     return {"message": "Настройки обновлены"}
 
-# ========== КАТЕГОРИИ ==========
+# ========== КАТЕГОРИИ (ПОЛНЫЙ CRUD) ==========
 @app.get("/api/categories")
 async def get_categories():
+    """Получить все категории"""
     conn = get_db()
     cur = conn.cursor()
     cur.execute("SELECT * FROM categories ORDER BY sort_order")
@@ -318,22 +340,101 @@ async def get_categories():
     return categories
 
 @app.post("/api/categories")
-async def create_category(name: str, icon: Optional[str] = None):
+async def create_category(data: CategoryCreate):
+    """Создать категорию (только админ)"""
+    if not is_admin(data.user_id):
+        raise HTTPException(403, "Нет прав")
+    
+    name = data.name.strip()
+    icon = data.icon or ""
+    
+    if not name:
+        raise HTTPException(400, "Название категории обязательно")
+    
     conn = get_db()
     cur = conn.cursor()
-    cur.execute("INSERT INTO categories (name, icon) VALUES (?, ?)", (name, icon))
+    
+    # Проверяем, есть ли уже такая категория
+    cur.execute("SELECT id FROM categories WHERE name = ?", (name,))
+    if cur.fetchone():
+        conn.close()
+        raise HTTPException(400, "Категория с таким названием уже существует")
+    
+    cur.execute(
+        "INSERT INTO categories (name, icon) VALUES (?, ?)",
+        (name, icon)
+    )
+    conn.commit()
+    category_id = cur.lastrowid
+    conn.close()
+    
+    return {"id": category_id, "message": f"Категория '{name}' создана"}
+
+@app.put("/api/categories/{category_id}")
+async def update_category(category_id: int, data: CategoryUpdate):
+    """Изменить категорию (только админ)"""
+    if not is_admin(data.user_id):
+        raise HTTPException(403, "Нет прав")
+    
+    name = data.name.strip()
+    icon = data.icon or ""
+    
+    if not name:
+        raise HTTPException(400, "Название категории обязательно")
+    
+    conn = get_db()
+    cur = conn.cursor()
+    
+    # Проверяем, существует ли категория
+    cur.execute("SELECT id FROM categories WHERE id = ?", (category_id,))
+    if not cur.fetchone():
+        conn.close()
+        raise HTTPException(404, "Категория не найдена")
+    
+    # Проверяем, не занято ли имя другой категорией
+    cur.execute("SELECT id FROM categories WHERE name = ? AND id != ?", (name, category_id))
+    if cur.fetchone():
+        conn.close()
+        raise HTTPException(400, "Категория с таким названием уже существует")
+    
+    cur.execute(
+        "UPDATE categories SET name = ?, icon = ? WHERE id = ?",
+        (name, icon, category_id)
+    )
     conn.commit()
     conn.close()
-    return {"message": "Категория создана"}
+    
+    return {"message": f"Категория обновлена"}
 
 @app.delete("/api/categories/{category_id}")
-async def delete_category(category_id: int):
+async def delete_category(category_id: int, user_id: int):
+    """Удалить категорию (только админ)"""
+    if not is_admin(user_id):
+        raise HTTPException(403, "Нет прав")
+    
     conn = get_db()
     cur = conn.cursor()
+    
+    # Проверяем, существует ли категория
+    cur.execute("SELECT name FROM categories WHERE id = ?", (category_id,))
+    category = cur.fetchone()
+    if not category:
+        conn.close()
+        raise HTTPException(404, "Категория не найдена")
+    
+    # Не даём удалить категорию "Все"
+    if category['name'] == 'Все':
+        conn.close()
+        raise HTTPException(400, "Нельзя удалить категорию 'Все'")
+    
+    # Обновляем товары с этой категорией на "Все"
+    cur.execute("UPDATE products SET category = 'Все' WHERE category = ?", (category['name'],))
+    
     cur.execute("DELETE FROM categories WHERE id = ?", (category_id,))
     conn.commit()
     conn.close()
-    return {"message": "Категория удалена"}
+    
+    return {"message": f"Категория '{category['name']}' удалена"}
 
 # ========== ТОВАРЫ ==========
 @app.get("/api/products")
@@ -341,6 +442,7 @@ async def get_products(
     category: Optional[str] = None,
     search: Optional[str] = None,
     sort: Optional[str] = None,
+    from_china: Optional[int] = None,
     limit: int = 50,
     offset: int = 0
 ):
@@ -358,6 +460,10 @@ async def get_products(
     if search:
         query += " AND name LIKE ?"
         params.append(f"%{search}%")
+    
+    if from_china is not None:
+        query += " AND from_china = ?"
+        params.append(from_china)
     
     if sort == "price_asc":
         query += " ORDER BY price ASC"
@@ -383,6 +489,9 @@ async def get_products(
     if search:
         count_query += " AND name LIKE ?"
         count_params.append(f"%{search}%")
+    if from_china is not None:
+        count_query += " AND from_china = ?"
+        count_params.append(from_china)
     
     cur.execute(count_query, count_params)
     total = cur.fetchone()['total']
@@ -413,13 +522,13 @@ async def get_product(product_id: int):
 
 @app.post("/api/products")
 async def create_product(data: ProductCreate):
-    """Создание товара"""
+    """Создание товара (только админ)"""
     conn = get_db()
     cur = conn.cursor()
     cur.execute(
-        """INSERT INTO products (name, price, quantity, note, category, photo)
-        VALUES (?, ?, ?, ?, ?, ?)""",
-        (data.name, data.price, data.quantity, data.note, data.category, data.photo)
+        """INSERT INTO products (name, price, quantity, note, category, photo, from_china)
+        VALUES (?, ?, ?, ?, ?, ?, ?)""",
+        (data.name, data.price, data.quantity, data.note, data.category, data.photo, data.from_china or 0)
     )
     conn.commit()
     product_id = cur.lastrowid
@@ -428,7 +537,7 @@ async def create_product(data: ProductCreate):
 
 @app.put("/api/products/{product_id}")
 async def update_product(product_id: int, data: ProductUpdate):
-    """Обновление товара"""
+    """Обновление товара (только админ)"""
     conn = get_db()
     cur = conn.cursor()
     
@@ -453,6 +562,9 @@ async def update_product(product_id: int, data: ProductUpdate):
     if data.photo is not None:
         fields.append("photo = ?")
         values.append(data.photo)
+    if data.from_china is not None:
+        fields.append("from_china = ?")
+        values.append(data.from_china)
     
     if not fields:
         raise HTTPException(400, "Нет полей для обновления")
@@ -466,7 +578,7 @@ async def update_product(product_id: int, data: ProductUpdate):
 
 @app.delete("/api/products/{product_id}")
 async def delete_product(product_id: int):
-    """Удаление товара"""
+    """Удаление товара (только админ)"""
     conn = get_db()
     cur = conn.cursor()
     cur.execute("DELETE FROM products WHERE id = ?", (product_id,))
@@ -645,7 +757,7 @@ async def create_order(data: OrderCreate):
 
 @app.get("/api/orders")
 async def get_orders(status: Optional[str] = None, limit: int = 100, offset: int = 0):
-    """Получение списка заявок"""
+    """Получение списка заявок (админ)"""
     conn = get_db()
     cur = conn.cursor()
     
@@ -884,4 +996,5 @@ async def get_stats():
 # ========== ЗАПУСК ==========
 if __name__ == "__main__":
     logger.info(f"🚀 Запуск FAKESHOP на порту {PORT}")
+    logger.info(f"👑 Админы: {ADMIN_IDS}")
     uvicorn.run(app, host="0.0.0.0", port=PORT)

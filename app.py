@@ -11,17 +11,17 @@ from pydantic import BaseModel
 import uvicorn
 from dotenv import load_dotenv
 import re
+import asyncio
+from telethon import TelegramClient, errors
 
 load_dotenv()
 
-PORT = int(os.getenv("PORT", 8000))
-ADMIN_IDS = [1886614664, 8814572765]  # Ты и второй админ
+PORT = int(os.getenv("PORT", 8000"))
+ADMIN_IDS = [1886614664, 8814572765]
 
-# ========== ЛОГИ ==========
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# ========== БД ==========
 DB_NAME = "fakeshop.db"
 
 def get_db():
@@ -30,11 +30,8 @@ def get_db():
     return conn
 
 def init_db():
-    """Инициализация всех таблиц"""
     conn = get_db()
     cur = conn.cursor()
-    
-    # Товары
     cur.execute("""
     CREATE TABLE IF NOT EXISTS products (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -49,8 +46,6 @@ def init_db():
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
     """)
-    
-    # Заявки (заказы)
     cur.execute("""
     CREATE TABLE IF NOT EXISTS orders (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -73,8 +68,6 @@ def init_db():
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
     """)
-    
-    # Корзина
     cur.execute("""
     CREATE TABLE IF NOT EXISTS cart (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -85,8 +78,6 @@ def init_db():
         UNIQUE(user_id, product_id)
     )
     """)
-    
-    # Категории
     cur.execute("""
     CREATE TABLE IF NOT EXISTS categories (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -95,13 +86,9 @@ def init_db():
         sort_order INTEGER DEFAULT 0
     )
     """)
-    
-    # Добавляем категории по умолчанию
     default_categories = ['Все', 'Футболки', 'Свитшоты', 'Кроссовки', 'Штаны', 'Аксессуары', 'Из Китая']
     for cat in default_categories:
         cur.execute("INSERT OR IGNORE INTO categories (name) VALUES (?)", (cat,))
-    
-    # Промокоды
     cur.execute("""
     CREATE TABLE IF NOT EXISTS promocodes (
         code TEXT PRIMARY KEY,
@@ -113,8 +100,6 @@ def init_db():
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
     """)
-    
-    # Бан-лист
     cur.execute("""
     CREATE TABLE IF NOT EXISTS banned_users (
         user_id INTEGER PRIMARY KEY,
@@ -122,8 +107,6 @@ def init_db():
         banned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
     """)
-    
-    # FAQ
     cur.execute("""
     CREATE TABLE IF NOT EXISTS faq (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -133,8 +116,6 @@ def init_db():
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
     """)
-    
-    # Отзывы (локальные)
     cur.execute("""
     CREATE TABLE IF NOT EXISTS reviews (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -146,8 +127,6 @@ def init_db():
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
     """)
-    
-    # Настройки
     cur.execute("""
     CREATE TABLE IF NOT EXISTS settings (
         key TEXT PRIMARY KEY,
@@ -155,8 +134,6 @@ def init_db():
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
     """)
-    
-    # Настройки по умолчанию
     default_settings = {
         'shop_name': 'FAKESHOP',
         'shop_description': 'Стильная одежда и обувь',
@@ -168,14 +145,12 @@ def init_db():
     }
     for key, value in default_settings.items():
         cur.execute("INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)", (key, value))
-    
     conn.commit()
     conn.close()
     logger.info("База данных инициализирована")
 
 init_db()
 
-# ========== PYDANTIC МОДЕЛИ ==========
 class ProductCreate(BaseModel):
     name: str
     price: float
@@ -246,21 +221,16 @@ class SettingsUpdate(BaseModel):
     payment_info: Optional[str] = None
     reviews_channel: Optional[str] = None
 
-# ========== FASTAPI ==========
 app = FastAPI(title="FAKESHOP Mini App API", version="2.0.0")
 
-# ========== СТАТИКА ==========
 os.makedirs("frontend", exist_ok=True)
 app.mount("/static", StaticFiles(directory="frontend"), name="static")
 
-# ========== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ==========
 def generate_order_number():
-    """Генерация уникального номера заказа"""
     now = datetime.now()
     return f"FAKE-{now.strftime('%Y%m%d')}-{now.strftime('%H%M%S')}"
 
 def check_maintenance():
-    """Проверка режима техработ"""
     conn = get_db()
     cur = conn.cursor()
     cur.execute("SELECT value FROM settings WHERE key = 'maintenance_mode'")
@@ -269,7 +239,6 @@ def check_maintenance():
     return result and result['value'] == 'true'
 
 def check_ban(user_id: int):
-    """Проверка бана пользователя"""
     conn = get_db()
     cur = conn.cursor()
     cur.execute("SELECT * FROM banned_users WHERE user_id = ?", (user_id,))
@@ -278,13 +247,10 @@ def check_ban(user_id: int):
     return result is not None
 
 def is_admin(user_id: int):
-    """Проверка, является ли пользователь админом"""
     return user_id in ADMIN_IDS
 
-# ========== ОСНОВНЫЕ РОУТЫ ==========
 @app.get("/")
 async def index():
-    """Главная страница"""
     try:
         with open("frontend/index.html", "r", encoding="utf-8") as f:
             return HTMLResponse(f.read())
@@ -293,7 +259,6 @@ async def index():
 
 @app.get("/admin")
 async def admin_panel():
-    """Админ-панель"""
     try:
         with open("frontend/admin.html", "r", encoding="utf-8") as f:
             return HTMLResponse(f.read())
@@ -304,7 +269,6 @@ async def admin_panel():
 async def health_check():
     return {"status": "ok", "timestamp": datetime.now().isoformat()}
 
-# ========== НАСТРОЙКИ ==========
 @app.get("/api/settings")
 async def get_settings():
     conn = get_db()
@@ -328,10 +292,8 @@ async def update_settings(data: SettingsUpdate):
     conn.close()
     return {"message": "Настройки обновлены"}
 
-# ========== КАТЕГОРИИ (ПОЛНЫЙ CRUD) ==========
 @app.get("/api/categories")
 async def get_categories():
-    """Получить все категории"""
     conn = get_db()
     cur = conn.cursor()
     cur.execute("SELECT * FROM categories ORDER BY sort_order")
@@ -341,25 +303,18 @@ async def get_categories():
 
 @app.post("/api/categories")
 async def create_category(data: CategoryCreate):
-    """Создать категорию (только админ)"""
     if not is_admin(data.user_id):
         raise HTTPException(403, "Нет прав")
-    
     name = data.name.strip()
     icon = data.icon or ""
-    
     if not name:
         raise HTTPException(400, "Название категории обязательно")
-    
     conn = get_db()
     cur = conn.cursor()
-    
-    # Проверяем, есть ли уже такая категория
     cur.execute("SELECT id FROM categories WHERE name = ?", (name,))
     if cur.fetchone():
         conn.close()
         raise HTTPException(400, "Категория с таким названием уже существует")
-    
     cur.execute(
         "INSERT INTO categories (name, icon) VALUES (?, ?)",
         (name, icon)
@@ -367,76 +322,54 @@ async def create_category(data: CategoryCreate):
     conn.commit()
     category_id = cur.lastrowid
     conn.close()
-    
     return {"id": category_id, "message": f"Категория '{name}' создана"}
 
 @app.put("/api/categories/{category_id}")
 async def update_category(category_id: int, data: CategoryUpdate):
-    """Изменить категорию (только админ)"""
     if not is_admin(data.user_id):
         raise HTTPException(403, "Нет прав")
-    
     name = data.name.strip()
     icon = data.icon or ""
-    
     if not name:
         raise HTTPException(400, "Название категории обязательно")
-    
     conn = get_db()
     cur = conn.cursor()
-    
-    # Проверяем, существует ли категория
     cur.execute("SELECT id FROM categories WHERE id = ?", (category_id,))
     if not cur.fetchone():
         conn.close()
         raise HTTPException(404, "Категория не найдена")
-    
-    # Проверяем, не занято ли имя другой категорией
     cur.execute("SELECT id FROM categories WHERE name = ? AND id != ?", (name, category_id))
     if cur.fetchone():
         conn.close()
         raise HTTPException(400, "Категория с таким названием уже существует")
-    
     cur.execute(
         "UPDATE categories SET name = ?, icon = ? WHERE id = ?",
         (name, icon, category_id)
     )
     conn.commit()
     conn.close()
-    
     return {"message": f"Категория обновлена"}
 
 @app.delete("/api/categories/{category_id}")
 async def delete_category(category_id: int, user_id: int):
-    """Удалить категорию (только админ)"""
     if not is_admin(user_id):
         raise HTTPException(403, "Нет прав")
-    
     conn = get_db()
     cur = conn.cursor()
-    
-    # Проверяем, существует ли категория
     cur.execute("SELECT name FROM categories WHERE id = ?", (category_id,))
     category = cur.fetchone()
     if not category:
         conn.close()
         raise HTTPException(404, "Категория не найдена")
-    
-    # Не даём удалить категорию "Все"
     if category['name'] == 'Все':
         conn.close()
         raise HTTPException(400, "Нельзя удалить категорию 'Все'")
-    
-    # Обновляем товары с этой категорией на "Все"
     cur.execute("UPDATE products SET category = 'Все' WHERE category = ?", (category['name'],))
-    
     cur.execute("DELETE FROM categories WHERE id = ?", (category_id,))
     conn.commit()
     conn.close()
-    
     return {"message": f"Категория '{category['name']}' удалена"}
 
-# ========== ТОВАРЫ ==========
 @app.get("/api/products")
 async def get_products(
     category: Optional[str] = None,
@@ -446,25 +379,19 @@ async def get_products(
     limit: int = 50,
     offset: int = 0
 ):
-    """Получение товаров с фильтрацией"""
     conn = get_db()
     cur = conn.cursor()
-    
     query = "SELECT * FROM products WHERE 1=1"
     params = []
-    
     if category and category != "Все":
         query += " AND category = ?"
         params.append(category)
-    
     if search:
         query += " AND name LIKE ?"
         params.append(f"%{search}%")
-    
     if from_china is not None:
         query += " AND from_china = ?"
         params.append(from_china)
-    
     if sort == "price_asc":
         query += " ORDER BY price ASC"
     elif sort == "price_desc":
@@ -473,14 +400,10 @@ async def get_products(
         query += " ORDER BY id DESC"
     else:
         query += " ORDER BY id DESC"
-    
     query += " LIMIT ? OFFSET ?"
     params.extend([limit, offset])
-    
     cur.execute(query, params)
     products = [dict(row) for row in cur.fetchall()]
-    
-    # Общее количество
     count_query = "SELECT COUNT(*) as total FROM products WHERE 1=1"
     count_params = []
     if category and category != "Все":
@@ -492,10 +415,8 @@ async def get_products(
     if from_china is not None:
         count_query += " AND from_china = ?"
         count_params.append(from_china)
-    
     cur.execute(count_query, count_params)
     total = cur.fetchone()['total']
-    
     conn.close()
     return {
         "products": products,
@@ -506,23 +427,19 @@ async def get_products(
 
 @app.get("/api/products/{product_id}")
 async def get_product(product_id: int):
-    """Карточка товара"""
     conn = get_db()
     cur = conn.cursor()
-    
     cur.execute("UPDATE products SET views = views + 1 WHERE id = ?", (product_id,))
     cur.execute("SELECT * FROM products WHERE id = ?", (product_id,))
     product = cur.fetchone()
     conn.commit()
     conn.close()
-    
     if not product:
         raise HTTPException(404, "Товар не найден")
     return dict(product)
 
 @app.post("/api/products")
 async def create_product(data: ProductCreate):
-    """Создание товара (только админ)"""
     conn = get_db()
     cur = conn.cursor()
     cur.execute(
@@ -537,13 +454,10 @@ async def create_product(data: ProductCreate):
 
 @app.put("/api/products/{product_id}")
 async def update_product(product_id: int, data: ProductUpdate):
-    """Обновление товара (только админ)"""
     conn = get_db()
     cur = conn.cursor()
-    
     fields = []
     values = []
-    
     if data.name is not None:
         fields.append("name = ?")
         values.append(data.name)
@@ -565,20 +479,16 @@ async def update_product(product_id: int, data: ProductUpdate):
     if data.from_china is not None:
         fields.append("from_china = ?")
         values.append(data.from_china)
-    
     if not fields:
         raise HTTPException(400, "Нет полей для обновления")
-    
     values.append(product_id)
     cur.execute(f"UPDATE products SET {', '.join(fields)} WHERE id = ?", values)
     conn.commit()
     conn.close()
-    
     return {"message": "Товар обновлен"}
 
 @app.delete("/api/products/{product_id}")
 async def delete_product(product_id: int):
-    """Удаление товара (только админ)"""
     conn = get_db()
     cur = conn.cursor()
     cur.execute("DELETE FROM products WHERE id = ?", (product_id,))
@@ -586,20 +496,16 @@ async def delete_product(product_id: int):
     conn.close()
     return {"message": "Товар удален"}
 
-# ========== КОРЗИНА ==========
 @app.get("/api/cart/{user_id}")
 async def get_cart(user_id: int):
-    """Получение корзины"""
     conn = get_db()
     cur = conn.cursor()
-    
     cur.execute("""
         SELECT c.*, p.name, p.price, p.photo, p.quantity as stock
         FROM cart c
         JOIN products p ON c.product_id = p.id
         WHERE c.user_id = ?
     """, (user_id,))
-    
     cart_items = []
     total = 0
     for row in cur.fetchall():
@@ -607,7 +513,6 @@ async def get_cart(user_id: int):
         item['subtotal'] = item['price'] * item['quantity']
         total += item['subtotal']
         cart_items.append(item)
-    
     conn.close()
     return {
         "items": cart_items,
@@ -617,20 +522,16 @@ async def get_cart(user_id: int):
 
 @app.post("/api/cart/{user_id}")
 async def add_to_cart(user_id: int, data: CartItem):
-    """Добавление в корзину"""
     if check_ban(user_id):
         raise HTTPException(403, "Вы забанены")
-    
     conn = get_db()
     cur = conn.cursor()
-    
     cur.execute("SELECT quantity FROM products WHERE id = ?", (data.product_id,))
     product = cur.fetchone()
     if not product:
         raise HTTPException(404, "Товар не найден")
     if product['quantity'] < data.quantity:
         raise HTTPException(400, "Недостаточно товара на складе")
-    
     cur.execute(
         """INSERT INTO cart (user_id, product_id, quantity)
         VALUES (?, ?, ?)
@@ -640,12 +541,10 @@ async def add_to_cart(user_id: int, data: CartItem):
     )
     conn.commit()
     conn.close()
-    
     return {"message": "Товар добавлен в корзину"}
 
 @app.delete("/api/cart/{user_id}/{product_id}")
 async def remove_from_cart(user_id: int, product_id: int):
-    """Удаление из корзины"""
     conn = get_db()
     cur = conn.cursor()
     cur.execute("DELETE FROM cart WHERE user_id = ? AND product_id = ?", (user_id, product_id))
@@ -655,7 +554,6 @@ async def remove_from_cart(user_id: int, product_id: int):
 
 @app.delete("/api/cart/{user_id}")
 async def clear_cart(user_id: int):
-    """Очистка корзины"""
     conn = get_db()
     cur = conn.cursor()
     cur.execute("DELETE FROM cart WHERE user_id = ?", (user_id,))
@@ -663,41 +561,30 @@ async def clear_cart(user_id: int):
     conn.close()
     return {"message": "Корзина очищена"}
 
-# ========== ЗАЯВКИ (ЗАКАЗЫ) ==========
 @app.post("/api/orders")
 async def create_order(data: OrderCreate):
-    """Создание заявки"""
     if check_maintenance():
         raise HTTPException(503, "Магазин на технических работах")
-    
     if check_ban(data.user_id):
         raise HTTPException(403, "Вы забанены")
-    
     conn = get_db()
     cur = conn.cursor()
-    
-    # Получаем корзину
     cur.execute("""
         SELECT c.product_id, c.quantity, p.price, p.name
         FROM cart c
         JOIN products p ON c.product_id = p.id
         WHERE c.user_id = ?
     """, (data.user_id,))
-    
     cart_items = cur.fetchall()
     if not cart_items:
         raise HTTPException(400, "Корзина пуста")
-    
     product_ids = []
     quantities = []
     total = 0
-    
     for item in cart_items:
         product_ids.append(str(item['product_id']))
         quantities.append(str(item['quantity']))
         total += item['price'] * item['quantity']
-    
-    # Применяем промокод
     final_total = total
     discount = 0
     if data.promocode:
@@ -714,9 +601,7 @@ async def create_order(data: OrderCreate):
                 "UPDATE promocodes SET used_count = used_count + 1 WHERE code = ?",
                 (data.promocode.upper(),)
             )
-    
     order_number = generate_order_number()
-    
     cur.execute("""
         INSERT INTO orders (
             order_number, user_id, username, first_name, last_name,
@@ -730,22 +615,15 @@ async def create_order(data: OrderCreate):
         total, discount, final_total, data.promocode.upper() if data.promocode else None,
         data.comment
     ))
-    
     order_id = cur.lastrowid
-    
-    # Уменьшаем количество товаров
     for item in cart_items:
         cur.execute(
             "UPDATE products SET quantity = quantity - ? WHERE id = ? AND quantity >= ?",
             (item['quantity'], item['product_id'], item['quantity'])
         )
-    
-    # Очищаем корзину
     cur.execute("DELETE FROM cart WHERE user_id = ?", (data.user_id,))
-    
     conn.commit()
     conn.close()
-    
     return {
         "order_id": order_id,
         "order_number": order_number,
@@ -757,19 +635,15 @@ async def create_order(data: OrderCreate):
 
 @app.get("/api/orders")
 async def get_orders(status: Optional[str] = None, limit: int = 100, offset: int = 0):
-    """Получение списка заявок (админ)"""
     conn = get_db()
     cur = conn.cursor()
-    
     query = "SELECT * FROM orders"
     params = []
     if status and status != 'all':
         query += " WHERE status = ?"
         params.append(status)
-    
     query += " ORDER BY created_at DESC LIMIT ? OFFSET ?"
     params.extend([limit, offset])
-    
     cur.execute(query, params)
     orders = [dict(row) for row in cur.fetchall()]
     conn.close()
@@ -777,7 +651,6 @@ async def get_orders(status: Optional[str] = None, limit: int = 100, offset: int
 
 @app.get("/api/orders/{order_id}")
 async def get_order(order_id: int):
-    """Получение конкретной заявки"""
     conn = get_db()
     cur = conn.cursor()
     cur.execute("SELECT * FROM orders WHERE id = ?", (order_id,))
@@ -789,11 +662,9 @@ async def get_order(order_id: int):
 
 @app.put("/api/orders/{order_id}/status")
 async def update_order_status(order_id: int, status: str):
-    """Обновление статуса заявки"""
     valid_statuses = ['new', 'processing', 'completed', 'cancelled']
     if status not in valid_statuses:
         raise HTTPException(400, f"Неверный статус")
-    
     conn = get_db()
     cur = conn.cursor()
     cur.execute(
@@ -806,7 +677,6 @@ async def update_order_status(order_id: int, status: str):
 
 @app.delete("/api/orders/{order_id}")
 async def delete_order(order_id: int):
-    """Удаление заявки (обработано)"""
     conn = get_db()
     cur = conn.cursor()
     cur.execute("DELETE FROM orders WHERE id = ?", (order_id,))
@@ -814,7 +684,6 @@ async def delete_order(order_id: int):
     conn.close()
     return {"message": "Заявка удалена"}
 
-# ========== ПРОМОКОДЫ ==========
 @app.get("/api/promocodes")
 async def get_promocodes():
     conn = get_db()
@@ -858,13 +727,10 @@ async def validate_promocode(code: str, total: float):
     )
     promo = cur.fetchone()
     conn.close()
-    
     if not promo:
         raise HTTPException(404, "Промокод недействителен")
-    
     if total < promo['min_order']:
         raise HTTPException(400, f"Минимальная сумма заказа: {promo['min_order']}")
-    
     return {
         "code": promo['code'],
         "discount": promo['discount'],
@@ -872,7 +738,6 @@ async def validate_promocode(code: str, total: float):
         "valid": True
     }
 
-# ========== БАН-СИСТЕМА ==========
 @app.get("/api/banned")
 async def get_banned_users():
     conn = get_db()
@@ -903,7 +768,6 @@ async def unban_user(user_id: int):
     conn.close()
     return {"message": f"Пользователь {user_id} разбанен"}
 
-# ========== FAQ ==========
 @app.get("/api/faq")
 async def get_faq():
     conn = get_db()
@@ -934,7 +798,6 @@ async def delete_faq(faq_id: int):
     conn.close()
     return {"message": "FAQ удален"}
 
-# ========== ОТЗЫВЫ ==========
 @app.get("/api/reviews")
 async def get_reviews(product_id: Optional[int] = None):
     conn = get_db()
@@ -951,7 +814,6 @@ async def get_reviews(product_id: Optional[int] = None):
 async def create_review(data: ReviewCreate):
     if check_ban(data.user_id):
         raise HTTPException(403, "Вы забанены")
-    
     conn = get_db()
     cur = conn.cursor()
     cur.execute(
@@ -963,27 +825,20 @@ async def create_review(data: ReviewCreate):
     conn.close()
     return {"message": "Отзыв создан"}
 
-# ========== СТАТИСТИКА ==========
 @app.get("/api/stats")
 async def get_stats():
     conn = get_db()
     cur = conn.cursor()
-    
     cur.execute("SELECT COUNT(*) as total_products FROM products")
     total_products = cur.fetchone()['total_products']
-    
     cur.execute("SELECT COUNT(*) as total_orders FROM orders")
     total_orders = cur.fetchone()['total_orders']
-    
     cur.execute("SELECT SUM(final_total) as total_revenue FROM orders WHERE status != 'cancelled'")
     total_revenue = cur.fetchone()['total_revenue'] or 0
-    
     cur.execute("SELECT COUNT(*) as total_users FROM (SELECT DISTINCT user_id FROM orders)")
     total_users = cur.fetchone()['total_users'] or 0
-    
     cur.execute("SELECT COUNT(*) as today_orders FROM orders WHERE DATE(created_at) = DATE('now')")
     today_orders = cur.fetchone()['today_orders']
-    
     conn.close()
     return {
         "total_products": total_products,
@@ -993,7 +848,31 @@ async def get_stats():
         "today_orders": today_orders
     }
 
-# ========== ЗАПУСК ==========
+api_id = int(os.getenv("API_ID", "28513725"))
+api_hash = os.getenv("API_HASH", "ваш_api_hash")
+channel_username = os.getenv("REVIEWS_CHANNEL", "TestimonialFAKESTORE")
+
+@app.get("/api/reviews/telegram")
+async def get_telegram_reviews():
+    try:
+        client = TelegramClient('session_reviews', api_id, api_hash)
+        await client.connect()
+        if not await client.is_user_authorized():
+            await client.start(phone=lambda: input("Введите номер телефона: "))
+        entity = await client.get_entity(f"@{channel_username}")
+        messages = []
+        async for msg in client.iter_messages(entity, limit=20):
+            if msg.text and not msg.text.startswith('/'):
+                messages.append({
+                    "text": msg.text,
+                    "date": msg.date.isoformat() if msg.date else None,
+                    "views": getattr(msg, 'views', 0)
+                })
+        await client.disconnect()
+        return {"reviews": messages}
+    except Exception as e:
+        return {"error": str(e), "reviews": []}
+
 if __name__ == "__main__":
     logger.info(f"🚀 Запуск FAKESHOP на порту {PORT}")
     logger.info(f"👑 Админы: {ADMIN_IDS}")

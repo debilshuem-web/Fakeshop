@@ -61,6 +61,13 @@ const adminToggleBtn = $('adminToggleBtn');
 const adminModeBadge = $('adminModeBadge');
 let toastTimeout = null;
 
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
 function showToast(message, type = 'info', duration = 3000) {
     toast.textContent = message;
     toast.className = 'toast ' + type;
@@ -544,13 +551,6 @@ function clearSearch() {
 
 function loadMore() {
     loadProducts();
-}
-
-function escapeHtml(text) {
-    if (!text) return '';
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
 }
 
 function switchAdminTab(tab) {

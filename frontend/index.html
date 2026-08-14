@@ -11,7 +11,7 @@
 <body>
 <header class="header">
 <div class="header-top">
-<div class="header-left"><span class="logo">🔥 FAKESHOP</span></div>
+<div class="header-left"><span class="logo">FAKESHOP</span></div>
 <div class="header-right">
 <button class="header-btn" id="searchToggle"><i class="fas fa-search"></i></button>
 <button class="header-btn" id="adminToggleBtn" style="display:none;"><i class="fas fa-crown"></i></button>
@@ -19,7 +19,7 @@
 </div>
 </div>
 <div class="search-container" id="searchContainer">
-<input type="text" id="searchInput" placeholder="Ищем, не найдём..." class="search-input">
+<input type="text" id="searchInput" placeholder="Поиск..." class="search-input">
 <button class="search-clear" id="searchClear"><i class="fas fa-times"></i></button>
 </div>
 <div class="categories-scroll" id="categoriesContainer">
@@ -28,17 +28,13 @@
 </header>
 <main class="main-content" id="mainContent">
 <div id="userMode">
-<div style="padding: 12px 12px 4px; color: #aaa; font-size: 15px; line-height: 1.5; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.03); margin-bottom: 6px;">
-🔥 FAKESHOP — место, где твой стиль находит себя, а кошелёк отдыхает.
-<br><span style="font-size: 13px; color: #666;">Смотри, выбирай, влюбляйся. (Или просто смотри, мы не против.)</span>
-</div>
 <div class="products-grid" id="productsGrid"></div>
 <div class="load-more-container" id="loadMoreContainer" style="display:none;">
-<button class="load-more-btn" id="loadMoreBtn">Ещё не устал? Жми!</button>
+<button class="load-more-btn" id="loadMoreBtn">Загрузить еще</button>
 </div>
 <div class="empty-state" id="emptyState" style="display:none;">
 <i class="fas fa-box-open"></i>
-<p>Пусто. Как моя голова по утрам.</p>
+<p>Товаров не найдено</p>
 </div>
 </div>
 <div id="adminMode" style="display:none;">
@@ -70,13 +66,13 @@
 <div class="tab-header"><h2><i class="fas fa-box"></i> Товары</h2><button class="add-btn" id="addProductBtn"><i class="fas fa-plus"></i> Добавить</button></div>
 <div class="product-form-container" id="productFormContainer" style="display:none;">
 <h3 id="productFormTitle">Новый товар</h3>
-<div class="form-group"><label>Название *</label><input type="text" id="productName" placeholder="Свитшот Cav empt"></div>
-<div class="form-row"><div class="form-group"><label>Цена (BYN) *</label><input type="number" id="productPrice" placeholder="90" step="0.01"></div><div class="form-group"><label>Количество *</label><input type="number" id="productQuantity" placeholder="5"></div></div>
+<div class="form-group"><label>Название *</label><input type="text" id="productName" placeholder="Название товара"></div>
+<div class="form-row"><div class="form-group"><label>Цена (BYN) *</label><input type="number" id="productPrice" placeholder="0" step="0.01"></div><div class="form-group"><label>Количество *</label><input type="number" id="productQuantity" placeholder="0"></div></div>
 <div class="form-group"><label>Категория</label><select id="productCategory"><option value="Все">Все</option></select></div>
 <div class="form-group"><label>Фото (ссылка)</label><input type="text" id="productPhoto" placeholder="https://..."></div>
-<div class="form-group"><label>Примечание</label><textarea id="productNote" placeholder="Оригинал, качество..."></textarea></div>
-<div class="form-checkbox"><input type="checkbox" id="productFromChina"><label for="productFromChina">🌏 Из Китая</label></div>
-<div class="form-actions"><button class="cancel-btn" id="productFormCancel">Отмена</button><button class="submit-btn" id="productFormSubmit">✅ Сохранить</button></div>
+<div class="form-group"><label>Примечание</label><textarea id="productNote" placeholder="Дополнительная информация"></textarea></div>
+<div class="form-checkbox"><input type="checkbox" id="productFromChina"><label for="productFromChina">Из Китая</label></div>
+<div class="form-actions"><button class="cancel-btn" id="productFormCancel">Отмена</button><button class="submit-btn" id="productFormSubmit">Сохранить</button></div>
 </div>
 <div style="display:flex; gap:8px; margin-bottom:12px;"><input type="text" id="adminSearchInput" placeholder="Поиск..." style="flex:1; padding:10px 14px; border-radius:12px; border:1px solid rgba(255,255,255,0.06); background:rgba(255,255,255,0.02); color:#fff;"><select id="adminCategoryFilter" style="padding:10px 14px; border-radius:12px; border:1px solid rgba(255,255,255,0.06); background:rgba(255,255,255,0.02); color:#fff;"><option value="Все">Все</option></select></div>
 <div id="adminProductsList">Загрузка...</div>
@@ -85,13 +81,13 @@
 <div class="tab-header"><h2><i class="fas fa-tags"></i> Категории</h2><button class="add-btn" id="addCategoryBtn"><i class="fas fa-plus"></i> Добавить</button></div>
 <div class="category-form-container" id="categoryFormContainer" style="display:none;">
 <h3>Новая категория</h3>
-<div class="form-row"><div class="form-group"><label>Название *</label><input type="text" id="categoryName" placeholder="Джинсы"></div><div class="form-group"><label>Иконка</label><input type="text" id="categoryIcon" placeholder="👖"></div></div>
-<div class="form-actions"><button class="cancel-btn" id="categoryFormCancel">Отмена</button><button class="submit-btn" id="categoryFormSubmit">✅ Сохранить</button></div>
+<div class="form-row"><div class="form-group"><label>Название *</label><input type="text" id="categoryName" placeholder="Название"></div><div class="form-group"><label>Иконка</label><input type="text" id="categoryIcon" placeholder="👖"></div></div>
+<div class="form-actions"><button class="cancel-btn" id="categoryFormCancel">Отмена</button><button class="submit-btn" id="categoryFormSubmit">Сохранить</button></div>
 </div>
 <div id="adminCategoriesList">Загрузка...</div>
 </div>
 <div class="admin-tab" id="tab-orders">
-<div class="tab-header"><h2><i class="fas fa-clipboard-list"></i> Заявки</h2><select id="orderStatusFilter" style="padding:8px 14px; border-radius:12px; border:1px solid rgba(255,255,255,0.06); background:rgba(255,255,255,0.02); color:#fff;"><option value="all">Все статусы</option><option value="new">🟢 Новые</option><option value="processing">🟡 В обработке</option><option value="completed">✅ Завершены</option><option value="cancelled">❌ Отменены</option></select></div>
+<div class="tab-header"><h2><i class="fas fa-clipboard-list"></i> Заявки</h2><select id="orderStatusFilter" style="padding:8px 14px; border-radius:12px; border:1px solid rgba(255,255,255,0.06); background:rgba(255,255,255,0.02); color:#fff;"><option value="all">Все статусы</option><option value="new">Новые</option><option value="processing">В обработке</option><option value="completed">Завершены</option><option value="cancelled">Отменены</option></select></div>
 <div id="adminOrdersList">Загрузка...</div>
 </div>
 <div class="admin-tab" id="tab-promocodes">
@@ -99,9 +95,9 @@
 <div class="promo-form-container" id="promoFormContainer" style="display:none;">
 <h3>Новый промокод</h3>
 <div class="form-row"><div class="form-group"><label>Код *</label><input type="text" id="promoCode" placeholder="SUMMER2026" style="text-transform:uppercase;"></div><div class="form-group"><label>Скидка % *</label><input type="number" id="promoDiscount" placeholder="10" min="1" max="100"></div></div>
-<div class="form-row"><div class="form-group"><label>Мин. сумма</label><input type="number" id="promoMinOrder" placeholder="0" value="0"></div><div class="form-group"><label>Лимит использований</label><input type="number" id="promoUsesLimit" placeholder="0 (безлимит)" value="0"></div></div>
+<div class="form-row"><div class="form-group"><label>Мин. сумма</label><input type="number" id="promoMinOrder" placeholder="0" value="0"></div><div class="form-group"><label>Лимит использований</label><input type="number" id="promoUsesLimit" placeholder="0" value="0"></div></div>
 <div class="form-group"><label>Действует до</label><input type="datetime-local" id="promoExpiresAt"></div>
-<div class="form-actions"><button class="cancel-btn" id="promoFormCancel">Отмена</button><button class="submit-btn" id="promoFormSubmit">✅ Создать</button></div>
+<div class="form-actions"><button class="cancel-btn" id="promoFormCancel">Отмена</button><button class="submit-btn" id="promoFormSubmit">Создать</button></div>
 </div>
 <div id="adminPromoCodes">Загрузка...</div>
 </div>
@@ -109,28 +105,28 @@
 <div class="tab-header"><h2><i class="fas fa-question-circle"></i> FAQ</h2><button class="add-btn" id="addFaqBtn"><i class="fas fa-plus"></i> Добавить</button></div>
 <div class="faq-form-container" id="faqFormContainer" style="display:none;">
 <h3>Новый FAQ</h3>
-<div class="form-group"><label>Вопрос *</label><input type="text" id="faqQuestion" placeholder="Как сделать заказ?"></div>
-<div class="form-group"><label>Ответ *</label><textarea id="faqAnswer" placeholder="Для заказа нажмите 'Купить'..."></textarea></div>
-<div class="form-actions"><button class="cancel-btn" id="faqFormCancel">Отмена</button><button class="submit-btn" id="faqFormSubmit">✅ Добавить</button></div>
+<div class="form-group"><label>Вопрос *</label><input type="text" id="faqQuestion" placeholder="Вопрос"></div>
+<div class="form-group"><label>Ответ *</label><textarea id="faqAnswer" placeholder="Ответ"></textarea></div>
+<div class="form-actions"><button class="cancel-btn" id="faqFormCancel">Отмена</button><button class="submit-btn" id="faqFormSubmit">Добавить</button></div>
 </div>
 <div id="adminFaqList">Загрузка...</div>
 </div>
 <div class="admin-tab" id="tab-banned">
 <div class="tab-header"><h2><i class="fas fa-ban"></i> Бан-лист</h2></div>
-<div class="ban-form"><div class="form-row"><div class="form-group"><label>ID пользователя</label><input type="number" id="banUserId" placeholder="1886614664"></div><div class="form-group"><label>Причина</label><input type="text" id="banReason" placeholder="Нарушение правил"></div></div><button class="ban-btn" id="banUserBtn"><i class="fas fa-gavel"></i> Забанить</button></div>
+<div class="ban-form"><div class="form-row"><div class="form-group"><label>ID пользователя</label><input type="number" id="banUserId" placeholder="1886614664"></div><div class="form-group"><label>Причина</label><input type="text" id="banReason" placeholder="Причина"></div></div><button class="ban-btn" id="banUserBtn">Забанить</button></div>
 <div id="adminBannedList">Загрузка...</div>
 </div>
 <div class="admin-tab" id="tab-settings">
 <div class="tab-header"><h2><i class="fas fa-cog"></i> Настройки</h2></div>
 <div class="settings-form" id="settingsForm">
 <div class="form-group"><label>Название магазина</label><input type="text" id="settingShopName" placeholder="FAKESHOP"></div>
-<div class="form-group"><label>Описание</label><input type="text" id="settingShopDesc" placeholder="Стильная одежда и обувь"></div>
-<div class="form-group"><label>Контакт менеджера</label><input type="text" id="settingContactManager" placeholder="@ManaReaper"></div>
-<div class="form-group"><label>Информация о доставке</label><input type="text" id="settingDelivery" placeholder="Доставка по всей стране"></div>
-<div class="form-group"><label>Информация об оплате</label><input type="text" id="settingPayment" placeholder="Оплата при получении"></div>
-<div class="form-group"><label>Канал с отзывами</label><input type="text" id="settingReviewsChannel" placeholder="@TestimonialFAKESTORE"></div>
-<div class="form-group"><label>Режим техработ</label><select id="settingMaintenance"><option value="false">🔓 Выключен</option><option value="true">🔒 Включен</option></select></div>
-<button class="settings-save-btn" id="settingsSaveBtn">💾 Сохранить</button>
+<div class="form-group"><label>Описание</label><input type="text" id="settingShopDesc" placeholder="Описание"></div>
+<div class="form-group"><label>Контакт менеджера</label><input type="text" id="settingContactManager" placeholder="@manager"></div>
+<div class="form-group"><label>Информация о доставке</label><input type="text" id="settingDelivery" placeholder="Доставка"></div>
+<div class="form-group"><label>Информация об оплате</label><input type="text" id="settingPayment" placeholder="Оплата"></div>
+<div class="form-group"><label>Канал с отзывами</label><input type="text" id="settingReviewsChannel" placeholder="@channel"></div>
+<div class="form-group"><label>Режим техработ</label><select id="settingMaintenance"><option value="false">Выключен</option><option value="true">Включен</option></select></div>
+<button class="settings-save-btn" id="settingsSaveBtn">Сохранить</button>
 </div>
 </div>
 <div class="admin-tab" id="tab-reviews">
@@ -141,14 +137,14 @@
 </main>
 <div class="cart-overlay" id="cartOverlay"></div>
 <div class="cart-panel" id="cartPanel">
-<div class="cart-header"><span class="cart-title">🛒 Тут твоё будущее</span><button class="cart-close" id="cartClose"><i class="fas fa-times"></i></button></div>
+<div class="cart-header"><span class="cart-title">Корзина</span><button class="cart-close" id="cartClose"><i class="fas fa-times"></i></button></div>
 <div class="cart-body" id="cartBody">
-<div class="cart-empty"><i class="fas fa-shopping-basket"></i><p>🧺 Пусто. Как моя голова по утрам.</p><p>Добавь что-нибудь, не стесняйся.</p></div>
+<div class="cart-empty"><i class="fas fa-shopping-basket"></i><p>Корзина пуста</p></div>
 <div class="cart-items" id="cartItems"></div>
 </div>
 <div class="cart-footer" id="cartFooter" style="display:none;">
 <div class="cart-total"><span>Итого:</span><span class="cart-total-price" id="cartTotal">0 BYN</span></div>
-<button class="checkout-btn" id="checkoutBtn">💸 Оформить заказ</button>
+<button class="checkout-btn" id="checkoutBtn">Оформить заказ</button>
 </div>
 </div>
 <div class="modal-overlay" id="modalOverlay">
@@ -157,17 +153,17 @@
 <div class="modal-overlay" id="orderModalOverlay">
 <div class="modal-container order-modal"><button class="modal-close" id="orderModalClose"><i class="fas fa-times"></i></button>
 <div class="modal-content" id="orderModalContent">
-<div class="order-success" id="orderSuccess" style="display:none;"><i class="fas fa-check-circle"></i><h2>Заказ принят!</h2><p id="orderNumberText">Номер заказа: <strong>#FAKE-2026...</strong></p><p>✅ Заказ ушёл в обработку. Менеджер @ManaReaper свяжется с тобой (он не кусается).</p><button class="order-close-btn" id="orderCloseBtn">Понятно</button></div>
+<div class="order-success" id="orderSuccess" style="display:none;"><i class="fas fa-check-circle"></i><h2>Заказ оформлен</h2><p id="orderNumberText">Номер заказа: <strong>#FAKE-2026...</strong></p><p>Менеджер свяжется с вами</p><button class="order-close-btn" id="orderCloseBtn">Понятно</button></div>
 <div class="order-form" id="orderForm"><h2>Оформление заказа</h2>
 <div class="form-group"><label>Номер телефона *</label><input type="tel" id="orderPhone" placeholder="+375 XX XXX-XX-XX" required></div>
 <div class="form-group"><label>Адрес доставки</label><input type="text" id="orderAddress" placeholder="Город, улица, дом..."></div>
-<div class="form-group"><label>Комментарий</label><textarea id="orderComment" placeholder="Дополнительная информация..."></textarea></div>
+<div class="form-group"><label>Комментарий</label><textarea id="orderComment" placeholder="Дополнительная информация"></textarea></div>
 <div class="form-group"><label>Промокод</label><div class="promo-input-group"><input type="text" id="orderPromo" placeholder="Введите промокод"><button class="promo-apply-btn" id="promoApplyBtn">Применить</button></div><div class="promo-info" id="promoInfo"></div></div>
 <div class="order-summary"><div class="order-summary-row"><span>Товары:</span><span id="orderSubtotal">0 BYN</span></div><div class="order-summary-row discount-row" id="discountRow" style="display:none;"><span>Скидка:</span><span id="orderDiscount">-0 BYN</span></div><div class="order-summary-row total-row"><span>Итого:</span><span id="orderTotal">0 BYN</span></div></div>
-<button class="submit-order-btn" id="submitOrderBtn">✅ Подтвердить заказ</button></div></div></div>
+<button class="submit-order-btn" id="submitOrderBtn">Подтвердить заказ</button></div></div></div>
 </div>
 <div class="modal-overlay confirm-modal" id="confirmModal"><div class="modal-container"><div class="modal-content"><h3 id="confirmTitle">Подтверждение</h3><p id="confirmText">Вы уверены?</p><div class="confirm-actions"><button class="cancel-btn" id="confirmCancel">Отмена</button><button class="danger-btn" id="confirmOk">Да, удалить</button></div></div></div></div>
-<div class="modal-overlay sendall-modal" id="sendAllModal"><div class="modal-container"><button class="modal-close" id="sendAllClose"><i class="fas fa-times"></i></button><div class="modal-content"><h3>📢 Рассылка</h3><div class="form-group"><label>Текст сообщения</label><textarea id="sendAllText" placeholder="Введите текст рассылки..." rows="5"></textarea></div><button class="submit-btn" id="sendAllSubmit">📨 Отправить всем</button></div></div></div>
+<div class="modal-overlay sendall-modal" id="sendAllModal"><div class="modal-container"><button class="modal-close" id="sendAllClose"><i class="fas fa-times"></i></button><div class="modal-content"><h3>Рассылка</h3><div class="form-group"><label>Текст сообщения</label><textarea id="sendAllText" placeholder="Введите текст рассылки..." rows="5"></textarea></div><button class="submit-btn" id="sendAllSubmit">Отправить всем</button></div></div></div>
 <div class="toast" id="toast"></div>
 <script src="/static/script.js"></script>
 </body>

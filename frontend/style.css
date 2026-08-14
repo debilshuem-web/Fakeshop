@@ -14,12 +14,6 @@ body {
     overflow-x: hidden;
 }
 
-@keyframes waveBackground {
-    0% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-    100% { background-position: 0% 50%; }
-}
-
 body::before {
     content: '';
     position: fixed;
@@ -28,31 +22,20 @@ body::before {
     width: 100%;
     height: 100%;
     z-index: -1;
-    background: linear-gradient(135deg, #0a0a0f 0%, #0d0d1a 50%, #0a0a0f 100%);
-    background-size: 400% 400%;
-    animation: waveBackground 12s ease-in-out infinite;
+    background: #0a0a0f;
 }
 
 body::after {
     content: '';
     position: fixed;
-    top: -50%;
-    left: -50%;
-    width: 200%;
-    height: 200%;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
     z-index: -1;
-    background:
-        radial-gradient(ellipse at 20% 50%, rgba(0, 180, 255, 0.06) 0%, transparent 60%),
-        radial-gradient(ellipse at 80% 50%, rgba(0, 100, 255, 0.04) 0%, transparent 60%),
-        radial-gradient(ellipse at 50% 80%, rgba(0, 200, 255, 0.03) 0%, transparent 50%);
-    animation: waveMove 18s ease-in-out infinite alternate;
-}
-
-@keyframes waveMove {
-    0% { transform: translate(0, 0) rotate(0deg); }
-    33% { transform: translate(2%, -2%) rotate(2deg); }
-    66% { transform: translate(-2%, 2%) rotate(-1deg); }
-    100% { transform: translate(1%, -1%) rotate(1deg); }
+    background: radial-gradient(ellipse at 20% 50%, rgba(0, 180, 255, 0.04) 0%, transparent 60%),
+                radial-gradient(ellipse at 80% 50%, rgba(0, 100, 255, 0.02) 0%, transparent 60%);
+    pointer-events: none;
 }
 
 .header {

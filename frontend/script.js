@@ -220,12 +220,12 @@ function createProductCard(product) {
     card.className = 'product-card';
     card.dataset.productId = product.id;
     const inStock = product.quantity > 0;
-    const statusText = inStock ? `✅ Осталось ${product.quantity} шт. Не зевай, они не резиновые.` : '❌ Улетели. Бывает.';
+    const statusText = inStock ? `В наличии (${product.quantity} шт)` : 'Нет в наличии';
     const statusClass = inStock ? 'product-status' : 'product-status out-of-stock';
     card.innerHTML = `
         <div class="product-image" onclick="openProduct(${product.id})">
             ${product.photo ? `<img src="${product.photo}" alt="${product.name}" loading="lazy">` : `<span class="placeholder-icon"><i class="fas fa-tshirt"></i></span>`}
-            <span class="product-id-badge">🆔 #${product.id}</span>
+            <span class="product-id-badge">#${product.id}</span>
             <button class="product-share-btn" onclick="event.stopPropagation(); shareProduct(${product.id})">
                 <i class="fas fa-share-alt"></i>
             </button>
@@ -236,10 +236,10 @@ function createProductCard(product) {
             <div class="${statusClass}">${statusText}</div>
             <div class="product-actions">
                 <button class="product-action-btn btn-cart" onclick="event.stopPropagation(); addToCart(${product.id})">
-                    <i class="fas fa-shopping-cart"></i> Забрать себе
+                    <i class="fas fa-shopping-cart"></i> В корзину
                 </button>
                 <button class="product-action-btn btn-buy" onclick="event.stopPropagation(); buyNow(${product.id})">
-                    <i class="fas fa-bolt"></i> Мне это надо
+                    <i class="fas fa-bolt"></i> Купить
                 </button>
             </div>
         </div>
@@ -260,23 +260,23 @@ async function openProduct(productId) {
 
 function renderProductModal(product) {
     const inStock = product.quantity > 0;
-    const statusText = inStock ? `✅ Осталось ${product.quantity} шт. Не зевай, они не резиновые.` : '❌ Улетели. Бывает.';
+    const statusText = inStock ? `В наличии (${product.quantity} шт)` : 'Нет в наличии';
     const statusClass = inStock ? 'modal-product-status' : 'modal-product-status out-of-stock';
     modalContent.innerHTML = `
-        <div class="modal-product-id">🆔 #${product.id}</div>
+        <div class="modal-product-id">#${product.id}</div>
         <div class="modal-product-image">
             ${product.photo ? `<img src="${product.photo}" alt="${product.name}">` : `<i class="fas fa-tshirt" style="font-size:60px;opacity:0.3;"></i>`}
         </div>
         <div class="modal-product-name">${escapeHtml(product.name)}</div>
         <div class="modal-product-price">${product.price} BYN</div>
         <div class="${statusClass}">${statusText}</div>
-        ${product.note ? `<div class="modal-product-note">📌 ${escapeHtml(product.note)}</div>` : ''}
+        ${product.note ? `<div class="modal-product-note">${escapeHtml(product.note)}</div>` : ''}
         <div class="modal-actions">
             <button class="product-action-btn btn-cart" onclick="addToCart(${product.id}); closeModal();">
-                <i class="fas fa-shopping-cart"></i> Забрать себе
+                <i class="fas fa-shopping-cart"></i> В корзину
             </button>
             <button class="product-action-btn btn-buy" onclick="buyNow(${product.id}); closeModal();">
-                <i class="fas fa-bolt"></i> Мне это надо
+                <i class="fas fa-bolt"></i> Купить
             </button>
         </div>
     `;
@@ -288,16 +288,16 @@ function closeModal() {
 
 function shareProduct(productId) {
     const shareUrl = `${window.location.origin}?start=product_${productId}`;
-    const text = `🔥 Смотри, что нашел в FAKESHOP! 🛍️\n\nПереходи по ссылке: ${shareUrl}`;
+    const text = `Товар #${productId} в FAKESHOP\n\n${shareUrl}`;
     if (navigator.share) {
         navigator.share({
-            title: 'FAKESHOP - Товар',
+            title: 'FAKESHOP',
             text: text,
             url: shareUrl
         }).catch(() => {});
     } else {
         navigator.clipboard.writeText(text).then(() => {
-            showToast('🔗 Ссылка скопирована!', 'success');
+            showToast('Ссылка скопирована', 'success');
         }).catch(() => {
             const textarea = document.createElement('textarea');
             textarea.value = text;
@@ -305,7 +305,7 @@ function shareProduct(productId) {
             textarea.select();
             document.execCommand('copy');
             document.body.removeChild(textarea);
-            showToast('🔗 Ссылка скопирована!', 'success');
+            showToast('Ссылка скопирована', 'success');
         });
     }
 }
@@ -317,7 +317,7 @@ async function addToCart(productId, quantity = 1) {
             body: JSON.stringify({ product_id: productId, quantity })
         });
         await loadCart();
-        showToast('✅ Добавили. Ты уже на шаг ближе к идеальному образу.', 'success');
+        showToast('Товар добавлен в корзину', 'success');
     } catch (error) {
         showToast(error.message || 'Ошибка добавления', 'error');
     }
@@ -340,7 +340,7 @@ function updateCartUI() {
     cartBadge.textContent = count;
     cartBadge.style.display = count > 0 ? 'flex' : 'none';
     if (cartItems.length === 0) {
-        cartItemsContainer.innerHTML = `<div class="cart-empty"><i class="fas fa-shopping-basket"></i><p>🧺 Пусто. Как моя голова по утрам.</p><p>Добавь что-нибудь, не стесняйся.</p></div>`;
+        cartItemsContainer.innerHTML = `<div class="cart-empty"><i class="fas fa-shopping-basket"></i><p>Корзина пуста</p></div>`;
         cartFooter.style.display = 'none';
         return;
     }
@@ -396,7 +396,7 @@ async function removeFromCart(productId) {
     try {
         await apiRequest(`/api/cart/${USER_ID}/${productId}`, { method: 'DELETE' });
         await loadCart();
-        showToast('🗑️ Убрали. Но ты ещё успеешь передумать.', 'info');
+        showToast('Товар удален из корзины', 'info');
     } catch (error) {
         showToast('Ошибка удаления', 'error');
     }
@@ -413,11 +413,11 @@ function closeCart() {
 }
 
 async function buyNow(productId) {
-    if (!confirm('⚡ Мне это надо?')) return;
+    if (!confirm('Купить этот товар?')) return;
     try {
         const product = await apiRequest(`/api/products/${productId}`);
         if (product.quantity <= 0) {
-            showToast('❌ Улетели. Бывает.', 'error');
+            showToast('Товара нет в наличии', 'error');
             return;
         }
         selectedProductIds = [productId];
@@ -486,12 +486,12 @@ async function applyPromo() {
         const total = parseFloat(orderSubtotal.textContent);
         const data = await apiRequest(`/api/promocodes/${code}/validate?total=${total}`, { method: 'POST' });
         appliedPromo = data;
-        promoInfo.textContent = `✅ Промокод применен! Скидка ${data.discount}%`;
+        promoInfo.textContent = `Промокод применен! Скидка ${data.discount}%`;
         promoInfo.className = 'promo-info';
         await updateOrderSummary();
-        showToast('🎉 Промокод применен!', 'success');
+        showToast('Промокод применен', 'success');
     } catch (error) {
-        promoInfo.textContent = `❌ ${error.message}`;
+        promoInfo.textContent = `${error.message}`;
         promoInfo.className = 'promo-info error';
         appliedPromo = null;
     }
@@ -527,7 +527,7 @@ async function submitOrder() {
         orderSuccess.style.display = 'block';
         orderNumberText.innerHTML = `Номер заказа: <strong>${result.order_number || '#' + result.order_id}</strong>`;
         await loadCart();
-        showToast('✅ Заказ ушёл в обработку. Менеджер @ManaReaper свяжется с тобой.', 'success');
+        showToast('Заказ оформлен', 'success');
     } catch (error) {
         showToast(error.message || 'Ошибка оформления', 'error');
     }
@@ -629,7 +629,7 @@ async function loadAdminProducts() {
         list.innerHTML = products.map(p => `
             <div class="admin-list-item">
                 <div class="admin-list-item-info">
-                    <div class="admin-list-item-title">🆔 #${p.id} ${escapeHtml(p.name)}</div>
+                    <div class="admin-list-item-title">#${p.id} ${escapeHtml(p.name)}</div>
                     <div class="admin-list-item-sub">${p.price} BYN · ${p.quantity} шт · ${p.category || 'Все'} ${p.quantity > 0 ? '✅' : '❌'} ${p.from_china ? '🌏 Из Китая' : ''}</div>
                 </div>
                 <div class="admin-list-actions">
@@ -659,7 +659,7 @@ function toggleProductForm() {
         const chinaCheck = $('productFromChina');
         if (chinaCheck) chinaCheck.checked = false;
         $('productFormSubmit').dataset.productId = '';
-        $('productFormSubmit').textContent = '✅ Сохранить';
+        $('productFormSubmit').textContent = 'Сохранить';
     }
 }
 
@@ -680,10 +680,10 @@ async function saveProduct() {
     try {
         if (editId) {
             await apiRequest(`/api/products/${editId}`, { method: 'PUT', body: JSON.stringify(data) });
-            showToast('✅ Товар обновлен', 'success');
+            showToast('Товар обновлен', 'success');
         } else {
             await apiRequest('/api/products', { method: 'POST', body: JSON.stringify(data) });
-            showToast('✅ Товар создан', 'success');
+            showToast('Товар создан', 'success');
         }
         toggleProductForm();
         loadAdminProducts();
@@ -707,17 +707,17 @@ async function editProduct(id) {
         const chinaCheck = $('productFromChina');
         if (chinaCheck) chinaCheck.checked = product.from_china == 1;
         $('productFormSubmit').dataset.productId = id;
-        $('productFormSubmit').textContent = '💾 Обновить';
+        $('productFormSubmit').textContent = 'Обновить';
     } catch (error) {
         showToast('Ошибка загрузки товара', 'error');
     }
 }
 
 async function deleteProduct(id) {
-    if (!confirm('🗑️ Точно удалить товар #' + id + '?')) return;
+    if (!confirm('Удалить товар #' + id + '?')) return;
     try {
         await apiRequest(`/api/products/${id}`, { method: 'DELETE' });
-        showToast('🗑️ Товар удален', 'info');
+        showToast('Товар удален', 'info');
         loadAdminProducts();
         loadProducts(true);
     } catch (error) {
@@ -762,7 +762,7 @@ function toggleCategoryForm() {
         $('categoryName').value = '';
         $('categoryIcon').value = '';
         $('categoryFormSubmit').dataset.categoryId = '';
-        $('categoryFormSubmit').textContent = '✅ Сохранить';
+        $('categoryFormSubmit').textContent = 'Сохранить';
     }
 }
 
@@ -780,13 +780,13 @@ async function saveCategory() {
                 method: 'PUT',
                 body: JSON.stringify({ name, icon, user_id: USER_ID })
             });
-            showToast('✅ Категория обновлена', 'success');
+            showToast('Категория обновлена', 'success');
         } else {
             await apiRequest('/api/categories', {
                 method: 'POST',
                 body: JSON.stringify({ name, icon, user_id: USER_ID })
             });
-            showToast('✅ Категория создана', 'success');
+            showToast('Категория создана', 'success');
         }
         toggleCategoryForm();
         loadAdminCategories();
@@ -801,14 +801,14 @@ function editCategory(id, name, icon) {
     $('categoryName').value = name;
     $('categoryIcon').value = icon;
     $('categoryFormSubmit').dataset.categoryId = id;
-    $('categoryFormSubmit').textContent = '💾 Обновить';
+    $('categoryFormSubmit').textContent = 'Обновить';
 }
 
 async function deleteCategory(id) {
-    if (!confirm('🗑️ Удалить категорию? Товары перенесутся в "Все".')) return;
+    if (!confirm('Удалить категорию? Товары перенесутся в "Все".')) return;
     try {
         await apiRequest(`/api/categories/${id}?user_id=${USER_ID}`, { method: 'DELETE' });
-        showToast('🗑️ Категория удалена', 'info');
+        showToast('Категория удалена', 'info');
         loadAdminCategories();
         loadCategories();
     } catch (error) {
@@ -831,17 +831,17 @@ async function loadAdminOrders() {
         }
         list.innerHTML = orders.map(o => {
             const statusMap = {
-                'new': '🟢 Свежий заказ',
-                'processing': '🟡 В работе (медленно, но верно)',
-                'completed': '✅ Готово! Ты молодец.',
-                'cancelled': '❌ Отменён. Бывает.'
+                'new': 'Новый',
+                'processing': 'В обработке',
+                'completed': 'Завершен',
+                'cancelled': 'Отменен'
             };
             return `
                 <div class="admin-list-item">
                     <div class="admin-list-item-info">
-                        <div class="admin-list-item-title">📦 ${o.order_number || '#' + o.id}</div>
-                        <div class="admin-list-item-sub">👤 ${o.username || o.first_name || 'Гость'} · 📞 ${o.phone || '-'}</div>
-                        <div class="admin-list-item-sub">💰 ${o.final_total || o.total} BYN</div>
+                        <div class="admin-list-item-title">${o.order_number || '#' + o.id}</div>
+                        <div class="admin-list-item-sub">${o.username || o.first_name || 'Гость'} · ${o.phone || '-'}</div>
+                        <div class="admin-list-item-sub">${o.final_total || o.total} BYN</div>
                         <div class="admin-list-item-sub"><span class="status-badge ${o.status}">${statusMap[o.status] || o.status}</span> ${o.created_at ? new Date(o.created_at).toLocaleString() : ''}</div>
                     </div>
                     <div class="admin-list-actions">
@@ -859,27 +859,26 @@ async function loadAdminOrders() {
 }
 
 async function acceptOrder(orderId, userId) {
-    if (!confirm('✅ Принять заказ #' + orderId + ' и связаться с покупателем?')) return;
+    if (!confirm('Принять заказ #' + orderId + '?')) return;
     try {
         await apiRequest(`/api/orders/${orderId}`, { method: 'DELETE' });
         if (userId && userId > 0) {
             window.open(`tg://user?id=${userId}`, '_blank');
         } else {
             window.open(`tg://resolve?domain=ManaReaper`, '_blank');
-            showToast('⚠️ Нет ID покупателя. Свяжись с менеджером.', 'warning');
         }
-        showToast('✅ Заказ принят! Чат с покупателем открыт.', 'success');
+        showToast('Заказ принят', 'success');
         loadAdminOrders();
     } catch (error) {
-        showToast('❌ Ошибка при принятии заказа', 'error');
+        showToast('Ошибка при принятии заказа', 'error');
     }
 }
 
 async function deleteOrder(id) {
-    if (!confirm('🗑️ Удалить заявку #' + id + '?')) return;
+    if (!confirm('Удалить заявку #' + id + '?')) return;
     try {
         await apiRequest(`/api/orders/${id}`, { method: 'DELETE' });
-        showToast('🗑️ Заявка удалена', 'info');
+        showToast('Заявка удалена', 'info');
         loadAdminOrders();
     } catch (error) {
         showToast('Ошибка удаления', 'error');
@@ -898,7 +897,7 @@ async function loadPromoCodes() {
         list.innerHTML = data.map(p => `
             <div class="admin-list-item">
                 <div class="admin-list-item-info">
-                    <div class="admin-list-item-title">🏷️ ${p.code}</div>
+                    <div class="admin-list-item-title">${p.code}</div>
                     <div class="admin-list-item-sub">Скидка ${p.discount}% · Использован ${p.used_count || 0}/${p.uses_limit || '∞'} раз</div>
                 </div>
                 <div class="admin-list-actions">
@@ -932,7 +931,7 @@ async function savePromo() {
             method: 'POST',
             body: JSON.stringify({ code, discount, min_order, uses_limit, expires_at })
         });
-        showToast('✅ Промокод создан', 'success');
+        showToast('Промокод создан', 'success');
         togglePromoForm();
         loadPromoCodes();
     } catch (error) {
@@ -944,7 +943,7 @@ async function deletePromo(code) {
     if (!confirm(`Удалить промокод ${code}?`)) return;
     try {
         await apiRequest(`/api/promocodes/${code}`, { method: 'DELETE' });
-        showToast('🗑️ Промокод удален', 'info');
+        showToast('Промокод удален', 'info');
         loadPromoCodes();
     } catch (error) {
         showToast('Ошибка удаления', 'error');
@@ -963,7 +962,7 @@ async function loadFaq() {
         list.innerHTML = data.map(f => `
             <div class="admin-list-item">
                 <div class="admin-list-item-info">
-                    <div class="admin-list-item-title">❓ ${escapeHtml(f.question)}</div>
+                    <div class="admin-list-item-title">${escapeHtml(f.question)}</div>
                     <div class="admin-list-item-sub">${escapeHtml(f.answer)}</div>
                 </div>
                 <div class="admin-list-actions">
@@ -994,7 +993,7 @@ async function saveFaq() {
             method: 'POST',
             body: JSON.stringify({ question, answer })
         });
-        showToast('✅ FAQ добавлен', 'success');
+        showToast('FAQ добавлен', 'success');
         toggleFaqForm();
         loadFaq();
     } catch (error) {
@@ -1006,7 +1005,7 @@ async function deleteFaq(id) {
     if (!confirm('Удалить FAQ?')) return;
     try {
         await apiRequest(`/api/faq/${id}`, { method: 'DELETE' });
-        showToast('🗑️ FAQ удален', 'info');
+        showToast('FAQ удален', 'info');
         loadFaq();
     } catch (error) {
         showToast('Ошибка удаления', 'error');
@@ -1025,7 +1024,7 @@ async function loadBannedUsers() {
         list.innerHTML = data.map(b => `
             <div class="admin-list-item">
                 <div class="admin-list-item-info">
-                    <div class="admin-list-item-title">🚫 ${b.user_id}</div>
+                    <div class="admin-list-item-title">${b.user_id}</div>
                     <div class="admin-list-item-sub">${b.reason || 'Без причины'} · ${b.banned_at ? new Date(b.banned_at).toLocaleString() : ''}</div>
                 </div>
                 <div class="admin-list-actions">
@@ -1047,7 +1046,7 @@ async function banUser() {
     }
     try {
         await apiRequest(`/api/banned/${userId}?reason=${encodeURIComponent(reason)}`, { method: 'POST' });
-        showToast(`🚫 Пользователь ${userId} забанен`, 'info');
+        showToast(`Пользователь ${userId} забанен`, 'info');
         $('banUserId').value = '';
         $('banReason').value = '';
         loadBannedUsers();
@@ -1060,7 +1059,7 @@ async function unbanUser(userId) {
     if (!confirm(`Разбанить ${userId}?`)) return;
     try {
         await apiRequest(`/api/banned/${userId}`, { method: 'DELETE' });
-        showToast(`✅ Пользователь ${userId} разбанен`, 'success');
+        showToast(`Пользователь ${userId} разбанен`, 'success');
         loadBannedUsers();
     } catch (error) {
         showToast('Ошибка', 'error');
@@ -1102,7 +1101,7 @@ async function saveSettings() {
     };
     try {
         await apiRequest('/api/settings', { method: 'PUT', body: JSON.stringify(data) });
-        showToast('💾 Настройки сохранены', 'success');
+        showToast('Настройки сохранены', 'success');
     } catch (error) {
         showToast('Ошибка сохранения', 'error');
     }
@@ -1115,7 +1114,7 @@ async function loadTelegramReviews() {
     try {
         const data = await apiRequest('/api/reviews/telegram');
         if (data.error) {
-            list.innerHTML = `<div class="empty-state"><p>⚠️ Ошибка: ${data.error}</p></div>`;
+            list.innerHTML = `<div class="empty-state"><p>Ошибка: ${data.error}</p></div>`;
             return;
         }
         const reviews = data.reviews || [];
@@ -1126,8 +1125,8 @@ async function loadTelegramReviews() {
         list.innerHTML = reviews.map(r => `
             <div class="admin-list-item">
                 <div class="admin-list-item-info">
-                    <div class="admin-list-item-title">📝 ${escapeHtml(r.text.substring(0, 100))}${r.text.length > 100 ? '...' : ''}</div>
-                    <div class="admin-list-item-sub">${r.date ? new Date(r.date).toLocaleString() : 'Дата не указана'} · 👁️ ${r.views || 0}</div>
+                    <div class="admin-list-item-title">${escapeHtml(r.text.substring(0, 100))}${r.text.length > 100 ? '...' : ''}</div>
+                    <div class="admin-list-item-sub">${r.date ? new Date(r.date).toLocaleString() : 'Дата не указана'} · ${r.views || 0} просмотров</div>
                 </div>
             </div>
         `).join('');
@@ -1156,10 +1155,10 @@ async function sendAll() {
         showToast('Введите текст рассылки', 'error');
         return;
     }
-    if (!confirm(`Отправить рассылку ${text.length} символов всем пользователям?`)) return;
+    if (!confirm(`Отправить рассылку всем пользователям?`)) return;
     try {
         await apiRequest('/api/send_all', { method: 'POST', body: JSON.stringify({ text }) });
-        showToast('📨 Рассылка отправлена!', 'success');
+        showToast('Рассылка отправлена', 'success');
         closeSendAll();
     } catch (error) {
         showToast('Ошибка отправки', 'error');
@@ -1252,9 +1251,8 @@ async function init() {
             setTimeout(() => openProduct(productId), 500);
         }
     }
-    console.log('🚀 FAKESHOP Mini App инициализирован');
-    console.log(`👤 User ID: ${USER_ID}`);
-    console.log(`👑 Админ: ${isAdmin() ? 'ДА' : 'НЕТ'}`);
+    console.log('FAKESHOP Mini App инициализирован');
+    console.log('User ID:', USER_ID);
 }
 
 document.addEventListener('DOMContentLoaded', init);

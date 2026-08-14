@@ -33,7 +33,7 @@ body::after {
     width: 100%;
     height: 100%;
     z-index: -1;
-    background: radial-gradient(ellipse at 20% 50%, rgba(0, 180, 255, 0.04) 0%, transparent 60%),
+    background: radial-gradient(ellipse at 20% 50%, rgba(0, 180, 255, 0.03) 0%, transparent 60%),
                 radial-gradient(ellipse at 80% 50%, rgba(0, 100, 255, 0.02) 0%, transparent 60%);
     pointer-events: none;
 }
@@ -57,17 +57,7 @@ body::after {
 .logo {
     font-size: 22px;
     font-weight: 900;
-    background: linear-gradient(135deg, #00d4ff, #0066ff, #00d4ff);
-    background-size: 200% 200%;
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    animation: grad 3s ease infinite;
-}
-
-@keyframes grad {
-    0% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-    100% { background-position: 0% 50%; }
+    color: #fff;
 }
 
 .header-right {
@@ -202,14 +192,11 @@ body::after {
 .product-price {
     font-size: 18px;
     font-weight: 800;
-    background: linear-gradient(135deg, #00d4ff, #0088ff);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+    color: #00d4ff;
 }
 
 .product-price small {
     font-size: 12px;
-    -webkit-text-fill-color: #666;
     color: #666;
 }
 
@@ -512,9 +499,7 @@ body::after {
 .modal-product-price {
     font-size: 26px;
     font-weight: 800;
-    background: linear-gradient(135deg, #00d4ff, #0088ff);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+    color: #00d4ff;
 }
 
 .modal-product-status {
